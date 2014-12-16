@@ -331,9 +331,9 @@ public:
 		if (step == 0) {
 			namespace nvfct = PMacc::nvidia::functors;
 			(*pushBGField)(fieldE, nvfct::Add(), fieldBackground::fieldBackgroundE(fieldE->getUnit()),
-						   0, fieldBackground::fieldBackgroundE::InfluenceParticlePusher);
+						   0, fieldBackground::fieldBackgroundE::InfluenceParticlePusher, false );
 			(*pushBGField)(fieldB, nvfct::Add(), fieldBackground::fieldBackgroundB(fieldB->getUnit()),
-						   0, fieldBackground::fieldBackgroundB::InfluenceParticlePusher);
+						   0, fieldBackground::fieldBackgroundB::InfluenceParticlePusher, false );
 		}
 		
         // communicate all fields
@@ -367,9 +367,9 @@ public:
 
         /** remove background field for particle pusher */
         (*pushBGField)(fieldE, nvfct::Sub(), fieldBackground::fieldBackgroundE(fieldE->getUnit()),
-                       currentStep, fieldBackground::fieldBackgroundE::InfluenceParticlePusher);
+                       currentStep, fieldBackground::fieldBackgroundE::InfluenceParticlePusher, false );
         (*pushBGField)(fieldB, nvfct::Sub(), fieldBackground::fieldBackgroundB(fieldB->getUnit()),
-                       currentStep, fieldBackground::fieldBackgroundB::InfluenceParticlePusher);
+                       currentStep, fieldBackground::fieldBackgroundB::InfluenceParticlePusher, false );
 
         this->myFieldSolver->update_beforeCurrent(currentStep);
 
@@ -401,9 +401,9 @@ public:
 		 *  in between the time steps.
 		 */
         (*pushBGField)(fieldE, nvfct::Add(), fieldBackground::fieldBackgroundE(fieldE->getUnit()),
-                       currentStep + 1, fieldBackground::fieldBackgroundE::InfluenceParticlePusher);
+                       currentStep, fieldBackground::fieldBackgroundE::InfluenceParticlePusher, true );
         (*pushBGField)(fieldB, nvfct::Add(), fieldBackground::fieldBackgroundB(fieldB->getUnit()),
-                       currentStep + 1, fieldBackground::fieldBackgroundB::InfluenceParticlePusher);
+                       currentStep, fieldBackground::fieldBackgroundB::InfluenceParticlePusher, true );
     }
 
     virtual void movingWindowCheck(uint32_t currentStep)

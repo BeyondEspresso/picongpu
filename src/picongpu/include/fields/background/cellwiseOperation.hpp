@@ -91,14 +91,18 @@ namespace cellwiseOperation
          */
         template<class T_Field, class T_OpFunctor, class T_ValFunctor>
         void
-        operator()( T_Field field, T_OpFunctor opFunctor, T_ValFunctor valFunctor, uint32_t currentStep, const bool enabled = true ) const
+        operator()( T_Field field, T_OpFunctor opFunctor, T_ValFunctor valFunctor, uint32_t currentStep, const bool enabled = true, const bool nextStep = false ) const
         {
             if( !enabled )
                 return;
-
+            
+            uint32_t addStep=0;
+            if ( nextStep ) ++addStep;
+            
             const SubGrid<simDim>& subGrid = Environment<simDim>::get().SubGrid();
             /** offset due to being the n-th GPU */
             DataSpace<simDim> totalCellOffset(subGrid.getLocalDomain().offset);
+            
             const uint32_t numSlides = MovingWindow::getInstance().getSlideCounter( currentStep );
 
             /** Assumption: all GPUs have the same number of cells in
@@ -117,7 +121,7 @@ namespace cellwiseOperation
             /* start kernel */
             __picKernelArea((kernelCellwiseOperation<T_OpFunctor>), cellDescription, T_Area)
                     (SuperCellSize::toRT().toDim3())
-                    (field->getDeviceDataBox(), opFunctor, valFunctor, totalCellOffset, halfSimSize, currentStep);
+                    (field->getDeviceDataBox(), opFunctor, valFunctor, totalCellOffset, halfSimSize, currentStep + addStep );
         }
     };
 
