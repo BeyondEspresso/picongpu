@@ -134,7 +134,7 @@ namespace picongpu
 			{
 				const float_64 beta0=::picongpu::bgrTWTS::SI::BETA0_SI; // propagation speed of overlap normalized to the speed of light. [Default: beta0=1.0]
 				const float_64 alphaTilt=atan2(1-beta0*cos(phiReal),beta0*sin(phiReal));
-				const float_64 phi=2*alphaTilt; // Definition of the laser pulse front tilt angle for the laser field below. For beta0=1.0, this is equivalent to our standard definition.
+				const float_64 phi=2*alphaTilt; // Definition of the laser pulse front tilt angle for the laser field below. For beta0=1.0, this is equivalent to our standard definition. Question: Why not phi=phiReal? Because the standard TWTS pulse is defined for beta0=1.0 and in the coordinate-system of the TWTS model phi is responsible for pulse front tilt and dispersion only. Hence the dispersion will (although physically correct) be slightly off the ideal TWTS pulse for beta0!=1.0. This only shows that this TWTS pulse is primarily designed for scenarios close to beta0=1.
 				const float_64 eta = PI/2 - (phiReal - alphaTilt); // angle between the laser pulse front and the y-axis
 				
 				const float_64 cspeed=::picongpu::SI::SPEED_OF_LIGHT_SI;
@@ -148,7 +148,7 @@ namespace picongpu
 				const float_64 x=pos.x();
 				const float_64 y=-sin(phiReal)*pos.y()-cos(phiReal)*pos.z();	// RotationMatrix[PI-phiReal].(y,z)
 				const float_64 z=+cos(phiReal)*pos.y()-sin(phiReal)*pos.z();	// TO DO: For 2 counter-propagation TWTS pulses take +phiReal and -phiReal. Where do we implement this?
-				const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/tan(eta); // halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff of the TWTS-pulse.
+				const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/abs(tan(eta)); // halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff of the TWTS-pulse. The abs()-function is for keeping the same offset for -phiReal and +phiReal
 				const float_64 m=3.; // Fudge parameter to make sure, that TWTS pulse starts to impact simulation volume at low intensity values.
 				const float_64 y2=(tauG/2*cspeed)/sin(eta)*m; // pulse length projected on y-axis, scaled with "fudge factor" m.
 				const float_64 y3=::picongpu::bgrTWTS::SI::FOCUS_POS_SI; // Position of maximum intensity in simulation volume along y
@@ -316,7 +316,7 @@ namespace picongpu
 				const float_64 x=pos.x();
 				const float_64 y=-sin(phiReal)*pos.y()-cos(phiReal)*pos.z();	// RotationMatrix[PI-phiReal].(y,z)
 				const float_64 z=+cos(phiReal)*pos.y()-sin(phiReal)*pos.z();	// TO DO: For 2 counter-propagation TWTS pulses take +phiReal and -phiReal. Where do we implement this?
-				const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/tan(eta); // halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff of the TWTS-pulse.
+				const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/abs(tan(eta)); // halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff of the TWTS-pulse.
 				const float_64 m=3.; // Fudge parameter to make sure, that TWTS pulse starts to impact simulation volume at low intensity values.
 				const float_64 y2=(tauG/2*cspeed)/sin(eta)*m; // pulse length projected on y-axis, scaled with "fudge factor" m.
 				const float_64 y3=::picongpu::bgrTWTS::SI::FOCUS_POS_SI; // Position of maximum intensity in simulation volume along y
@@ -389,7 +389,7 @@ namespace picongpu
 				const float_64 x=pos.x();
 				const float_64 y=-sin(phiReal)*pos.y()-cos(phiReal)*pos.z();	// RotationMatrix[PI-phiReal].(y,z)
 				const float_64 z=+cos(phiReal)*pos.y()-sin(phiReal)*pos.z();	// TO DO: For 2 counter-propagation TWTS pulses take +phiReal and -phiReal. Where do we implement this?
-				const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/tan(eta); // halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff of the TWTS-pulse.
+				const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/abs(tan(eta)); // halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff of the TWTS-pulse.
 				const float_64 m=3.; // Fudge parameter to make sure, that TWTS pulse starts to impact simulation volume at low intensity values.
 				const float_64 y2=(tauG/2*cspeed)/sin(eta)*m; // pulse length projected on y-axis, scaled with "fudge factor" m.
 				const float_64 y3=::picongpu::bgrTWTS::SI::FOCUS_POS_SI; // Position of maximum intensity in simulation volume along y
