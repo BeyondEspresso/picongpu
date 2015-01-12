@@ -154,10 +154,18 @@ namespace picongpu
 				const float_64 y3=::picongpu::bgrTWTS::SI::FOCUS_POS_SI; // Position of maximum intensity in simulation volume along y
 				const float_64 tdelay= (y1+y2+y3)/(cspeed*beta0);
 				const float_64 t=::picongpu::bgrTWTS::getTime(time,tdelay);
+                
+                //Shortcuts for speeding up the field calculation.
+                const float_64 sinPhi = sin(phi);
+                const float_64 cosPhi = cos(phi);
+                const float_64 tanPhi = tan(phi);
+                const float_64 sinPhi2 = sin(phi/2.);
+                const float_64 cosPhi2 = cos(phi/2.);
+                const float_64 tanPhi2 = tan(phi/2.);
 				
-				const Complex_64 helpVar1=Complex_64(0,1)*rho0 - y*cos(phi) - z*sin(phi);
-				const Complex_64 helpVar2=Complex_64(0,-1)*cspeed*om0*tauG*tauG - y*cos(phi)/cos(phi/2.)/cos(phi/2.)*tan(phi/2.) - 2*z*tan(phi/2.)*tan(phi/2.);
-				const Complex_64 helpVar3=Complex_64(0,1)*rho0 - y*cos(phi) - z*sin(phi);
+				const Complex_64 helpVar1=Complex_64(0,1)*rho0 - y*cosPhi - z*sinPhi;
+				const Complex_64 helpVar2=Complex_64(0,-1)*cspeed*om0*tauG*tauG - y*cosPhi/cosPhi2/cosPhi2*tanPhi2 - 2*z*tanPhi2*tanPhi2;
+				const Complex_64 helpVar3=Complex_64(0,1)*rho0 - y*cosPhi - z*sinPhi;
 
 				const Complex_64 helpVar4=(
 				-(cspeed*cspeed*k*om0*tauG*tauG*wy*wy*x*x)
@@ -167,35 +175,35 @@ namespace picongpu
 				+ 4*cspeed*om0*t*wy*wy*z*rho0
 				- Complex_64(0,2)*cspeed*om0*om0*tauG*tauG*wy*wy*z*rho0
 				- 2*om0*wy*wy*z*z*rho0
-				- Complex_64(0,8)*om0*wy*wy*y*(cspeed*t - z)*z*sin(phi/2.)*sin(phi/2.)
-				+ Complex_64(0,8)/sin(phi)*(
+				- Complex_64(0,8)*om0*wy*wy*y*(cspeed*t - z)*z*sinPhi2*sinPhi2
+				+ Complex_64(0,8)/sinPhi*(
 						+2*z*z*(cspeed*om0*t*wy*wy + Complex_64(0,1)*cspeed*y*y - om0*wy*wy*z)
 						+ y*(
 							+ cspeed*k*wy*wy*x*x
 							- Complex_64(0,2)*cspeed*om0*t*wy*wy*rho0
 							+ 2*cspeed*y*y*rho0
 							+ Complex_64(0,2)*om0*wy*wy*z*rho0
-						)*tan(PI/2-phi)/sin(phi)
-					)*sin(phi/2.)*sin(phi/2.)*sin(phi/2.)*sin(phi/2.)
-				- Complex_64(0,2)*cspeed*cspeed*om0*t*t*wy*wy*z*sin(phi)
-				- 2*cspeed*cspeed*om0*om0*t*tauG*tauG*wy*wy*z*sin(phi)
-				- Complex_64(0,2)*cspeed*cspeed*om0*tauG*tauG*y*y*z*sin(phi)
-				+ Complex_64(0,4)*cspeed*om0*t*wy*wy*z*z*sin(phi)
-				+ 2*cspeed*om0*om0*tauG*tauG*wy*wy*z*z*sin(phi)
-				- Complex_64(0,2)*om0*wy*wy*z*z*z*sin(phi)
-				- 4*cspeed*om0*t*wy*wy*y*rho0*tan(phi/2.)
-				+ 4*om0*wy*wy*y*z*rho0*tan(phi/2.)
-				+ Complex_64(0,2)*y*y*(cspeed*om0*t*wy*wy + Complex_64(0,1)*cspeed*y*y - om0*wy*wy*z)*cos(phi)*cos(phi)/cos(phi/2.)/cos(phi/2.)*tan(phi/2.)
-				+ Complex_64(0,2)*cspeed*k*wy*wy*x*x*z*tan(phi/2.)*tan(phi/2.)
-				- 2*om0*wy*wy*y*y*rho0*tan(phi/2.)*tan(phi/2.)
-				+ 4*cspeed*om0*t*wy*wy*z*rho0*tan(phi/2.)*tan(phi/2.)
-				+ Complex_64(0,4)*cspeed*y*y*z*rho0*tan(phi/2.)*tan(phi/2.)
-				- 4*om0*wy*wy*z*z*rho0*tan(phi/2.)*tan(phi/2.)
-				- Complex_64(0,2)*om0*wy*wy*y*y*z*sin(phi)*tan(phi/2.)*tan(phi/2.)
-				- 2*y*cos(phi)*(om0*(cspeed*cspeed*(Complex_64(0,1)*t*t*wy*wy + om0*t*tauG*tauG*wy*wy + Complex_64(0,1)*tauG*tauG*y*y) - cspeed*(Complex_64(0,2)*t + om0*tauG*tauG)*wy*wy*z + Complex_64(0,1)*wy*wy*z*z) + Complex_64(0,2)*om0*wy*wy*y*(cspeed*t - z)*tan(phi/2.) + Complex_64(0,1)*(Complex_64(0,-4)*cspeed*y*y*z + om0*wy*wy*(y*y - 4*(cspeed*t - z)*z))*tan(phi/2.)*tan(phi/2.))
+						)*tan(PI/2-phi)/sinPhi
+					)*sinPhi2*sinPhi2*sinPhi2*sinPhi2
+				- Complex_64(0,2)*cspeed*cspeed*om0*t*t*wy*wy*z*sinPhi
+				- 2*cspeed*cspeed*om0*om0*t*tauG*tauG*wy*wy*z*sinPhi
+				- Complex_64(0,2)*cspeed*cspeed*om0*tauG*tauG*y*y*z*sinPhi
+				+ Complex_64(0,4)*cspeed*om0*t*wy*wy*z*z*sinPhi
+				+ 2*cspeed*om0*om0*tauG*tauG*wy*wy*z*z*sinPhi
+				- Complex_64(0,2)*om0*wy*wy*z*z*z*sinPhi
+				- 4*cspeed*om0*t*wy*wy*y*rho0*tanPhi2
+				+ 4*om0*wy*wy*y*z*rho0*tanPhi2
+				+ Complex_64(0,2)*y*y*(cspeed*om0*t*wy*wy + Complex_64(0,1)*cspeed*y*y - om0*wy*wy*z)*cosPhi*cosPhi/cosPhi2/cosPhi2*tanPhi2
+				+ Complex_64(0,2)*cspeed*k*wy*wy*x*x*z*tanPhi2*tanPhi2
+				- 2*om0*wy*wy*y*y*rho0*tanPhi2*tanPhi2
+				+ 4*cspeed*om0*t*wy*wy*z*rho0*tanPhi2*tanPhi2
+				+ Complex_64(0,4)*cspeed*y*y*z*rho0*tanPhi2*tanPhi2
+				- 4*om0*wy*wy*z*z*rho0*tanPhi2*tanPhi2
+				- Complex_64(0,2)*om0*wy*wy*y*y*z*sinPhi*tanPhi2*tanPhi2
+				- 2*y*cosPhi*(om0*(cspeed*cspeed*(Complex_64(0,1)*t*t*wy*wy + om0*t*tauG*tauG*wy*wy + Complex_64(0,1)*tauG*tauG*y*y) - cspeed*(Complex_64(0,2)*t + om0*tauG*tauG)*wy*wy*z + Complex_64(0,1)*wy*wy*z*z) + Complex_64(0,2)*om0*wy*wy*y*(cspeed*t - z)*tanPhi2 + Complex_64(0,1)*(Complex_64(0,-4)*cspeed*y*y*z + om0*wy*wy*(y*y - 4*(cspeed*t - z)*z))*tanPhi2*tanPhi2)
 				)/(2.*cspeed*wy*wy*helpVar1*helpVar2);
 
-				const Complex_64 helpVar5=cspeed*om0*tauG*tauG - Complex_64(0,8)*y*tan(PI/2-phi)/sin(phi)/sin(phi)*sin(phi/2.)*sin(phi/2.)*sin(phi/2.)*sin(phi/2.) - Complex_64(0,2)*z*tan(phi/2.)*tan(phi/2.);
+				const Complex_64 helpVar5=cspeed*om0*tauG*tauG - Complex_64(0,8)*y*tan(PI/2-phi)/sinPhi/sinPhi*sinPhi2*sinPhi2*sinPhi2*sinPhi2 - Complex_64(0,2)*z*tanPhi2*tanPhi2;
 				const Complex_64 result=(Complex_64::cexp(helpVar4)*tauG*Complex_64::csqrt((cspeed*om0*rho0)/helpVar3))/Complex_64::csqrt(helpVar5);			
 				return result.get_real();
 			}
@@ -322,10 +330,18 @@ namespace picongpu
 				const float_64 y3=::picongpu::bgrTWTS::SI::FOCUS_POS_SI; // Position of maximum intensity in simulation volume along y
 				const float_64 tdelay= (y1+y2+y3)/(cspeed*beta0);
 				const float_64 t=::picongpu::bgrTWTS::getTime(time,tdelay);
-				
-				const Complex_64 helpVar1=rho0 + Complex_64(0,1)*y*cos(phi) + Complex_64(0,1)*z*sin(phi);
-				const Complex_64 helpVar2=cspeed*om0*tauG*tauG + Complex_64(0,2)*(-z - y*tan(PI/2-phi))*tan(phi/2.)*tan(phi/2.);
-				const Complex_64 helpVar3=Complex_64(0,1)*rho0 - y*cos(phi) - z*sin(phi);
+				                
+                //Shortcuts for speeding up the field calculation.
+                const float_64 sinPhi = sin(phi);
+                const float_64 cosPhi = cos(phi);
+                const float_64 tanPhi = tan(phi);
+                const float_64 sinPhi2 = sin(phi/2.);
+                const float_64 cosPhi2 = cos(phi/2.);
+                const float_64 tanPhi2 = tan(phi/2.);
+                
+				const Complex_64 helpVar1=rho0 + Complex_64(0,1)*y*cosPhi + Complex_64(0,1)*z*sinPhi;
+				const Complex_64 helpVar2=cspeed*om0*tauG*tauG + Complex_64(0,2)*(-z - y*tan(PI/2-phi))*tanPhi2*tanPhi2;
+				const Complex_64 helpVar3=Complex_64(0,1)*rho0 - y*cosPhi - z*sinPhi;
 				const Complex_64 helpVar4=-1.0*(
 				cspeed*cspeed*k*om0*tauG*tauG*wy*wy*x*x
 				+ 2*cspeed*cspeed*om0*t*t*wy*wy*rho0
@@ -334,31 +350,31 @@ namespace picongpu
 				- 4*cspeed*om0*t*wy*wy*z*rho0
 				+ Complex_64(0,2)*cspeed*om0*om0*tauG*tauG*wy*wy*z*rho0
 				+ 2*om0*wy*wy*z*z*rho0
-				+ 4*cspeed*om0*t*wy*wy*y*rho0*tan(phi/2.)
-				- 4*om0*wy*wy*y*z*rho0*tan(phi/2.)
-				- Complex_64(0,2)*cspeed*k*wy*wy*x*x*z*tan(phi/2.)*tan(phi/2.)
-				+ 2*om0*wy*wy*y*y*rho0*tan(phi/2.)*tan(phi/2.)
-				- 4*cspeed*om0*t*wy*wy*z*rho0*tan(phi/2.)*tan(phi/2.)
-				- Complex_64(0,4)*cspeed*y*y*z*rho0*tan(phi/2.)*tan(phi/2.)
-				+ 4*om0*wy*wy*z*z*rho0*tan(phi/2.)*tan(phi/2.)
-				- Complex_64(0,2)*cspeed*k*wy*wy*x*x*y*tan(PI/2-phi)*tan(phi/2.)*tan(phi/2.)
-				- 4*cspeed*om0*t*wy*wy*y*rho0*tan(PI/2-phi)*tan(phi/2.)*tan(phi/2.)
-				- Complex_64(0,4)*cspeed*y*y*y*rho0*tan(PI/2-phi)*tan(phi/2.)*tan(phi/2.)
-				+ 4*om0*wy*wy*y*z*rho0*tan(PI/2-phi)*tan(phi/2.)*tan(phi/2.)
-				+ 2*z*sin(phi)*(
+				+ 4*cspeed*om0*t*wy*wy*y*rho0*tanPhi2
+				- 4*om0*wy*wy*y*z*rho0*tanPhi2
+				- Complex_64(0,2)*cspeed*k*wy*wy*x*x*z*tanPhi2*tanPhi2
+				+ 2*om0*wy*wy*y*y*rho0*tanPhi2*tanPhi2
+				- 4*cspeed*om0*t*wy*wy*z*rho0*tanPhi2*tanPhi2
+				- Complex_64(0,4)*cspeed*y*y*z*rho0*tanPhi2*tanPhi2
+				+ 4*om0*wy*wy*z*z*rho0*tanPhi2*tanPhi2
+				- Complex_64(0,2)*cspeed*k*wy*wy*x*x*y*tan(PI/2-phi)*tanPhi2*tanPhi2
+				- 4*cspeed*om0*t*wy*wy*y*rho0*tan(PI/2-phi)*tanPhi2*tanPhi2
+				- Complex_64(0,4)*cspeed*y*y*y*rho0*tan(PI/2-phi)*tanPhi2*tanPhi2
+				+ 4*om0*wy*wy*y*z*rho0*tan(PI/2-phi)*tanPhi2*tanPhi2
+				+ 2*z*sinPhi*(
 					om0*(cspeed*cspeed*(Complex_64(0,1)*t*t*wy*wy + om0*t*tauG*tauG*wy*wy + Complex_64(0,1)*tauG*tauG*y*y) - cspeed*(Complex_64(0,2)*t + om0*tauG*tauG)*wy*wy*z + Complex_64(0,1)*wy*wy*z*z)
-					+ Complex_64(0,2)*om0*wy*wy*y*(cspeed*t - z)*tan(phi/2.) + Complex_64(0,1)*(Complex_64(0,-2)*cspeed*y*y*z + om0*wy*wy*(y*y - 2*(cspeed*t - z)*z))*tan(phi/2.)*tan(phi/2.)
+					+ Complex_64(0,2)*om0*wy*wy*y*(cspeed*t - z)*tanPhi2 + Complex_64(0,1)*(Complex_64(0,-2)*cspeed*y*y*z + om0*wy*wy*(y*y - 2*(cspeed*t - z)*z))*tanPhi2*tanPhi2
 					)
-				+ 2*y*cos(phi)*(
+				+ 2*y*cosPhi*(
 					om0*(cspeed*cspeed*(Complex_64(0,1)*t*t*wy*wy + om0*t*tauG*tauG*wy*wy + Complex_64(0,1)*tauG*tauG*y*y) - cspeed*(Complex_64(0,2)*t + om0*tauG*tauG)*wy*wy*z + Complex_64(0,1)*wy*wy*z*z)
-					+ Complex_64(0,2)*om0*wy*wy*y*(cspeed*t - z)*tan(phi/2.)
-					+ Complex_64(0,1)*(Complex_64(0,-4)*cspeed*y*y*z + om0*wy*wy*(y*y - 4*(cspeed*t - z)*z) - 2*y*(cspeed*om0*t*wy*wy + Complex_64(0,1)*cspeed*y*y - om0*wy*wy*z)*tan(PI/2-phi))*tan(phi/2.)*tan(phi/2.)
+					+ Complex_64(0,2)*om0*wy*wy*y*(cspeed*t - z)*tanPhi2
+					+ Complex_64(0,1)*(Complex_64(0,-4)*cspeed*y*y*z + om0*wy*wy*(y*y - 4*(cspeed*t - z)*z) - 2*y*(cspeed*om0*t*wy*wy + Complex_64(0,1)*cspeed*y*y - om0*wy*wy*z)*tan(PI/2-phi))*tanPhi2*tanPhi2
 					)
 				)/(2.*cspeed*wy*wy*helpVar1*helpVar2);
 
-				const Complex_64 helpVar5=Complex_64(0,-1)*cspeed*om0*tauG*tauG + (-z - y*tan(PI/2-phi))*tan(phi/2.)*tan(phi/2.)*2;
-				const Complex_64 helpVar6=(cspeed*(cspeed*om0*tauG*tauG + Complex_64(0,2)*(-z - y*tan(PI/2-phi))*tan(phi/2.)*tan(phi/2.)))/(om0*rho0);
-				const Complex_64 result=(Complex_64::cexp(helpVar4)*tauG/cos(phi/2.)/cos(phi/2.)*(rho0 + Complex_64(0,1)*y*cos(phi) + Complex_64(0,1)*z*sin(phi))*(Complex_64(0,2)*cspeed*t + cspeed*om0*tauG*tauG - Complex_64(0,4)*z + cspeed*(Complex_64(0,2)*t + om0*tauG*tauG)*cos(phi) + Complex_64(0,2)*y*tan(phi/2.))*Complex_64::cpow(helpVar3,-1.5))/(2.*helpVar5*Complex_64::csqrt(helpVar6));
+				const Complex_64 helpVar5=Complex_64(0,-1)*cspeed*om0*tauG*tauG + (-z - y*tan(PI/2-phi))*tanPhi2*tanPhi2*2;
+				const Complex_64 helpVar6=(cspeed*(cspeed*om0*tauG*tauG + Complex_64(0,2)*(-z - y*tan(PI/2-phi))*tanPhi2*tanPhi2))/(om0*rho0);
+				const Complex_64 result=(Complex_64::cexp(helpVar4)*tauG/cosPhi2/cosPhi2*(rho0 + Complex_64(0,1)*y*cosPhi + Complex_64(0,1)*z*sinPhi)*(Complex_64(0,2)*cspeed*t + cspeed*om0*tauG*tauG - Complex_64(0,4)*z + cspeed*(Complex_64(0,2)*t + om0*tauG*tauG)*cosPhi + Complex_64(0,2)*y*tanPhi2)*Complex_64::cpow(helpVar3,-1.5))/(2.*helpVar5*Complex_64::csqrt(helpVar6));
 
 				return result.get_real();
 			}
@@ -395,33 +411,41 @@ namespace picongpu
 				const float_64 y3=::picongpu::bgrTWTS::SI::FOCUS_POS_SI; // Position of maximum intensity in simulation volume along y
 				const float_64 tdelay= (y1+y2+y3)/(cspeed*beta0);
 				const float_64 t=::picongpu::bgrTWTS::getTime(time,tdelay);
-				
-				const Complex_64 helpVar1=-(cspeed*z) - cspeed*y*tan(PI/2-phi) + Complex_64(0,1)*cspeed*rho0/sin(phi);
-				const Complex_64 helpVar2=Complex_64(0,1)*rho0 - y*cos(phi) - z*sin(phi);
+				                
+                //Shortcuts for speeding up the field calculation.
+                const float_64 sinPhi = sin(phi);
+                const float_64 cosPhi = cos(phi);
+                const float_64 tanPhi = tan(phi);
+                const float_64 sinPhi2 = sin(phi/2.);
+                const float_64 cosPhi2 = cos(phi/2.);
+                const float_64 tanPhi2 = tan(phi/2.);
+                
+				const Complex_64 helpVar1=-(cspeed*z) - cspeed*y*tan(PI/2-phi) + Complex_64(0,1)*cspeed*rho0/sinPhi;
+				const Complex_64 helpVar2=Complex_64(0,1)*rho0 - y*cosPhi - z*sinPhi;
 				const Complex_64 helpVar3=helpVar2*cspeed;
-				const Complex_64 helpVar4=cspeed*om0*tauG*tauG - Complex_64(0,1)*y*cos(phi)/cos(phi/2.)/cos(phi/2.)*tan(phi/2.) - Complex_64(0,2)*z*tan(phi/2.)*tan(phi/2.);
-				const Complex_64 helpVar5=2*cspeed*t - Complex_64(0,1)*cspeed*om0*tauG*tauG - 2*z + 8*y/sin(phi)/sin(phi)/sin(phi)*sin(phi/2.)*sin(phi/2.)*sin(phi/2.)*sin(phi/2.) - 2*z*tan(phi/2.)*tan(phi/2.);
+				const Complex_64 helpVar4=cspeed*om0*tauG*tauG - Complex_64(0,1)*y*cosPhi/cosPhi2/cosPhi2*tanPhi2 - Complex_64(0,2)*z*tanPhi2*tanPhi2;
+				const Complex_64 helpVar5=2*cspeed*t - Complex_64(0,1)*cspeed*om0*tauG*tauG - 2*z + 8*y/sinPhi/sinPhi/sinPhi*sinPhi2*sinPhi2*sinPhi2*sinPhi2 - 2*z*tanPhi2*tanPhi2;
 
 				const Complex_64 helpVar6=(
-				(om0*y*rho0/cos(phi/2.)/cos(phi/2.)/cos(phi/2.)/cos(phi/2.))/helpVar1 
+				(om0*y*rho0/cosPhi2/cosPhi2/cosPhi2/cosPhi2)/helpVar1 
 				- (Complex_64(0,2)*k*x*x)/helpVar2 
 				- (Complex_64(0,1)*om0*om0*tauG*tauG*rho0)/helpVar2
 				- (Complex_64(0,4)*y*y*rho0)/(wy*wy*helpVar2)
-				+ (om0*om0*tauG*tauG*y*cos(phi))/helpVar2
-				+ (4*y*y*y*cos(phi))/(wy*wy*helpVar2)
-				+ (om0*om0*tauG*tauG*z*sin(phi))/helpVar2
-				+ (4*y*y*z*sin(phi))/(wy*wy*helpVar2)
-				+ (Complex_64(0,2)*om0*y*y*cos(phi)/cos(phi/2.)/cos(phi/2.)*tan(phi/2.))/helpVar3
-				+ (om0*y*rho0*cos(phi)/cos(phi/2.)/cos(phi/2.)*tan(phi/2.))/helpVar3
-				+ (Complex_64(0,1)*om0*y*y*cos(phi)*cos(phi)/cos(phi/2.)/cos(phi/2.)*tan(phi/2.))/helpVar3
-				+ (Complex_64(0,4)*om0*y*z*tan(phi/2.)*tan(phi/2.))/helpVar3
-				- (2*om0*z*rho0*tan(phi/2.)*tan(phi/2.))/helpVar3
-				- (Complex_64(0,2)*om0*z*z*sin(phi)*tan(phi/2.)*tan(phi/2.))/helpVar3
+				+ (om0*om0*tauG*tauG*y*cosPhi)/helpVar2
+				+ (4*y*y*y*cosPhi)/(wy*wy*helpVar2)
+				+ (om0*om0*tauG*tauG*z*sinPhi)/helpVar2
+				+ (4*y*y*z*sinPhi)/(wy*wy*helpVar2)
+				+ (Complex_64(0,2)*om0*y*y*cosPhi/cosPhi2/cosPhi2*tanPhi2)/helpVar3
+				+ (om0*y*rho0*cosPhi/cosPhi2/cosPhi2*tanPhi2)/helpVar3
+				+ (Complex_64(0,1)*om0*y*y*cosPhi*cosPhi/cosPhi2/cosPhi2*tanPhi2)/helpVar3
+				+ (Complex_64(0,4)*om0*y*z*tanPhi2*tanPhi2)/helpVar3
+				- (2*om0*z*rho0*tanPhi2*tanPhi2)/helpVar3
+				- (Complex_64(0,2)*om0*z*z*sinPhi*tanPhi2*tanPhi2)/helpVar3
 				- (om0*helpVar5*helpVar5)/(cspeed*helpVar4)
 				)/4.;
 						
-				const Complex_64 helpVar7=cspeed*om0*tauG*tauG - Complex_64(0,1)*y*cos(phi)/cos(phi/2.)/cos(phi/2.)*tan(phi/2.) - Complex_64(0,2)*z*tan(phi/2.)*tan(phi/2.);
-				const Complex_64 result=(Complex_64(0,2)*Complex_64::cexp(helpVar6)*tauG*tan(phi/2.)*(cspeed*t - z + y*tan(phi/2.))*Complex_64::csqrt((om0*rho0)/helpVar3))/Complex_64::cpow(helpVar7,1.5);
+				const Complex_64 helpVar7=cspeed*om0*tauG*tauG - Complex_64(0,1)*y*cosPhi/cosPhi2/cosPhi2*tanPhi2 - Complex_64(0,2)*z*tanPhi2*tanPhi2;
+				const Complex_64 result=(Complex_64(0,2)*Complex_64::cexp(helpVar6)*tauG*tanPhi2*(cspeed*t - z + y*tanPhi2)*Complex_64::csqrt((om0*rho0)/helpVar3))/Complex_64::cpow(helpVar7,1.5);
 
 				return result.get_real();
 			}
