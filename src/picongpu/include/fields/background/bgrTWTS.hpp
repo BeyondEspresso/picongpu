@@ -146,7 +146,7 @@ namespace picongpu
 				const float_64 wy=::picongpu::bgrTWTS::SI::WY_SI; // Width of TWTS pulse
 				const float_64 k=2*PI/lambda0;
 				const float_64 x=pos.x();
-				const float_64 y=-sin(phiReal)*pos.y()-cos(phiReal)*pos.z();	// RotationMatrix[PI-phiReal].(y,z)
+				const float_64 y=-sin(phiReal)*pos.y()-cos(phiReal)*pos.z();	// RotationMatrix[PI/2+phiReal].(y,z) (180°-flip at phiReal=90° coordinate system in paper is oriented the other way round.)
 				const float_64 z=+cos(phiReal)*pos.y()-sin(phiReal)*pos.z();	// TO DO: For 2 counter-propagation TWTS pulses take +phiReal and -phiReal. Where do we implement this?
 				const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/abs(tan(eta)); // halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff of the TWTS-pulse. The abs()-function is for keeping the same offset for -phiReal and +phiReal
 				const float_64 m=3.; // Fudge parameter to make sure, that TWTS pulse starts to impact simulation volume at low intensity values.
@@ -158,7 +158,7 @@ namespace picongpu
                 //Shortcuts for speeding up the field calculation.
                 const float_64 sinPhi = sin(phi);
                 const float_64 cosPhi = cos(phi);
-                const float_64 tanPhi = tan(phi);
+                //const float_64 tanPhi = tan(phi);
                 const float_64 sinPhi2 = sin(phi/2.);
                 const float_64 cosPhi2 = cos(phi/2.);
                 const float_64 tanPhi2 = tan(phi/2.);
@@ -257,7 +257,11 @@ namespace picongpu
 				if ( ! ::picongpu::bgrTWTS::includeCollidingTWTS ) {
 					// Single TWTS-Pulse
 #if( SIMDIM == DIM3 )
-					return float3_X(0.0, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*calcTWTSBy(bFieldPositions[1], time, halfSimSize, ::picongpu::bgrTWTS::SI::PHI_SI) / unitField[1], (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*calcTWTSBz(bFieldPositions[2], time, halfSimSize, ::picongpu::bgrTWTS::SI::PHI_SI) / unitField[1]);
+                    const float_64 By1=calcTWTSBy(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 Bz1=calcTWTSBz(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 By1_rot=-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1+cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
+                    const float_64 Bz1_rot=-cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;    // for rotating back the Field-Vektors.
+					return float3_X(0.0, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*By1_rot/ unitField[1], (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*Bz1_rot/ unitField[1]);
 #elif( SIMDIM == DIM2 )
 					/** Corresponding position vector for the Ez-components in 2D simulations.
 					 *  3D     2D
@@ -268,6 +272,7 @@ namespace picongpu
 					 *  By --> By
 					 *  Bz --> -Bx
 					 */
+                    //TO DO: Insert correct rotation  matrix for 2D.
 					const float3_X dim2PosBx = float3_X( 0.0, (bFieldPositions[0]).y(), (bFieldPositions[0]).x() );
 					const float3_X dim2PosBy = float3_X( 0.0, (bFieldPositions[1]).y(), (bFieldPositions[1]).x() );
 					return float3_X( -1.0*(::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*calcTWTSBz(dim2PosBx, time, halfSimSize, ::picongpu::bgrTWTS::SI::PHI_SI) / unitField[1], (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*calcTWTSBy(dim2PosBy, time, halfSimSize, ::picongpu::bgrTWTS::SI::PHI_SI) / unitField[1], 0.0 );
@@ -276,24 +281,33 @@ namespace picongpu
 				else {
 					// Colliding TWTS-Pulse
 #if( SIMDIM == DIM3 )
-					return float3_X(0.0, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)
-									*( calcTWTSBy(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
-									  +calcTWTSBy(bFieldPositions[1], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI))
-									)/ unitField[1]
-							, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)
-									*( calcTWTSBz(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
-									  +calcTWTSBz(bFieldPositions[2], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI))
-									)/ unitField[1]);
+                    const float_64 By1=calcTWTSBy(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
+									  +calcTWTSBy(bFieldPositions[1], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 Bz1=calcTWTSBz(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
+									  +calcTWTSBz(bFieldPositions[2], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 By1_rot=-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1+cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
+                    const float_64 Bz1_rot=-cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;    // for rotating back the Field-Vektors.
+					return float3_X(0.0, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*By1_rot/ unitField[1], (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*Bz1_rot/ unitField[1]);
 #elif( SIMDIM == DIM2 )
 					const float3_X dim2PosBx = float3_X( 0.0, (bFieldPositions[0]).y(), (bFieldPositions[0]).x() );
 					const float3_X dim2PosBy = float3_X( 0.0, (bFieldPositions[1]).y(), (bFieldPositions[1]).x() );
+                    
+                    // TO DO: Fix rotation matrix for 2D.
+                    /*
+                    const float_64 By1=calcTWTSBz(dim2PosBx, time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
+									  +calcTWTSBz(dim2PosBx, time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 Bz1=calcTWTSBy(dim2PosBy, time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
+									  +calcTWTSBy(dim2PosBy, time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));                    
+                    const float_64 By1_rot=-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1+cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
+                    const float_64 Bz1_rot=-cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;    // for rotating back the Field-Vektors.
+                    */
 					return float3_X( -1.0*(::picongpu::bgrTWTS::SI::AMPLITUDE_SI)
 									*( calcTWTSBz(dim2PosBx, time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
 									  +calcTWTSBz(dim2PosBx, time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI))
 									)/ unitField[1]
 							, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)
-									*( calcTWTSBz(dim2PosBy, time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
-									  +calcTWTSBz(dim2PosBy, time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI))
+									*( calcTWTSBy(dim2PosBy, time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
+									  +calcTWTSBy(dim2PosBy, time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI))
 									)/ unitField[1], 0.0 );
 #endif
 				}
@@ -322,7 +336,7 @@ namespace picongpu
 				const float_64 wy=::picongpu::bgrTWTS::SI::WY_SI; // Width of TWTS pulse
 				const float_64 k=2*PI/lambda0;
 				const float_64 x=pos.x();
-				const float_64 y=-sin(phiReal)*pos.y()-cos(phiReal)*pos.z();	// RotationMatrix[PI-phiReal].(y,z)
+				const float_64 y=-sin(phiReal)*pos.y()-cos(phiReal)*pos.z();	// RotationMatrix[PI/2+phiReal].(y,z)
 				const float_64 z=+cos(phiReal)*pos.y()-sin(phiReal)*pos.z();	// TO DO: For 2 counter-propagation TWTS pulses take +phiReal and -phiReal. Where do we implement this?
 				const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/abs(tan(eta)); // halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff of the TWTS-pulse.
 				const float_64 m=3.; // Fudge parameter to make sure, that TWTS pulse starts to impact simulation volume at low intensity values.
@@ -334,8 +348,8 @@ namespace picongpu
                 //Shortcuts for speeding up the field calculation.
                 const float_64 sinPhi = sin(phi);
                 const float_64 cosPhi = cos(phi);
-                const float_64 tanPhi = tan(phi);
-                const float_64 sinPhi2 = sin(phi/2.);
+                //const float_64 tanPhi = tan(phi);
+                //const float_64 sinPhi2 = sin(phi/2.);
                 const float_64 cosPhi2 = cos(phi/2.);
                 const float_64 tanPhi2 = tan(phi/2.);
                 
@@ -403,7 +417,7 @@ namespace picongpu
 				const float_64 wy=::picongpu::bgrTWTS::SI::WY_SI; // Width of TWTS pulse
 				const float_64 k=2*PI/lambda0;
 				const float_64 x=pos.x();
-				const float_64 y=-sin(phiReal)*pos.y()-cos(phiReal)*pos.z();	// RotationMatrix[PI-phiReal].(y,z)
+				const float_64 y=-sin(phiReal)*pos.y()-cos(phiReal)*pos.z();	// RotationMatrix[PI/2+phiReal].(y,z)
 				const float_64 z=+cos(phiReal)*pos.y()-sin(phiReal)*pos.z();	// TO DO: For 2 counter-propagation TWTS pulses take +phiReal and -phiReal. Where do we implement this?
 				const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/abs(tan(eta)); // halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff of the TWTS-pulse.
 				const float_64 m=3.; // Fudge parameter to make sure, that TWTS pulse starts to impact simulation volume at low intensity values.
@@ -415,7 +429,7 @@ namespace picongpu
                 //Shortcuts for speeding up the field calculation.
                 const float_64 sinPhi = sin(phi);
                 const float_64 cosPhi = cos(phi);
-                const float_64 tanPhi = tan(phi);
+                //const float_64 tanPhi = tan(phi);
                 const float_64 sinPhi2 = sin(phi/2.);
                 const float_64 cosPhi2 = cos(phi/2.);
                 const float_64 tanPhi2 = tan(phi/2.);
