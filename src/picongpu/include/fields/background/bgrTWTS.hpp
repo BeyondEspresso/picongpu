@@ -281,13 +281,15 @@ namespace picongpu
 				else {
 					// Colliding TWTS-Pulse
 #if( SIMDIM == DIM3 )
-                    const float_64 By1=calcTWTSBy(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
-									  +calcTWTSBy(bFieldPositions[1], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
-                    const float_64 Bz1=calcTWTSBz(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI))
-									  +calcTWTSBz(bFieldPositions[2], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 By1=calcTWTSBy(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 By2=calcTWTSBy(bFieldPositions[1], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 Bz1=calcTWTSBz(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
+					const float_64 Bz2=calcTWTSBz(bFieldPositions[2], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
                     const float_64 By1_rot=-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1+cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
                     const float_64 Bz1_rot=-cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;    // for rotating back the Field-Vektors.
-					return float3_X(0.0, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*By1_rot/ unitField[1], (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*Bz1_rot/ unitField[1]);
+                    const float_64 By2_rot=-sin(-(::picongpu::bgrTWTS::SI::PHI_SI))*By2+cos(-(::picongpu::bgrTWTS::SI::PHI_SI))*Bz2;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
+                    const float_64 Bz2_rot=-cos(-(::picongpu::bgrTWTS::SI::PHI_SI))*By2-sin(-(::picongpu::bgrTWTS::SI::PHI_SI))*Bz2;    // for rotating back the Field-Vektors.
+					return float3_X(0.0, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*(By1_rot+By2_rot)/ unitField[1], (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*(Bz1_rot+Bz2_rot)/ unitField[1]);
 #elif( SIMDIM == DIM2 )
 					const float3_X dim2PosBx = float3_X( 0.0, (bFieldPositions[0]).y(), (bFieldPositions[0]).x() );
 					const float3_X dim2PosBy = float3_X( 0.0, (bFieldPositions[1]).y(), (bFieldPositions[1]).x() );
