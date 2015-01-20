@@ -257,10 +257,12 @@ namespace picongpu
 				if ( ! ::picongpu::bgrTWTS::includeCollidingTWTS ) {
 					// Single TWTS-Pulse
 #if( SIMDIM == DIM3 )
-                    const float_64 By1=calcTWTSBy(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
-                    const float_64 Bz1=calcTWTSBz(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
-                    const float_64 By1_rot=-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1+cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
-                    const float_64 Bz1_rot=-cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;    // for rotating back the Field-Vektors.
+                    const float_64 By_y_1=calcTWTSBy(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 Bz_y_1=calcTWTSBz(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 By_z_1=calcTWTSBy(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 Bz_z_1=calcTWTSBz(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 By1_rot=-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*By_y_1+cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz_y_1;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
+                    const float_64 Bz1_rot=-cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*By_z_1-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz_z_1;  // for rotating back the Field-Vektors.
 					return float3_X(0.0, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*By1_rot/ unitField[1], (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*Bz1_rot/ unitField[1]);
 #elif( SIMDIM == DIM2 )
 					/** Corresponding position vector for the Ez-components in 2D simulations.
@@ -281,14 +283,19 @@ namespace picongpu
 				else {
 					// Colliding TWTS-Pulse
 #if( SIMDIM == DIM3 )
-                    const float_64 By1=calcTWTSBy(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
-                    const float_64 By2=calcTWTSBy(bFieldPositions[1], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
-                    const float_64 Bz1=calcTWTSBz(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
-					const float_64 Bz2=calcTWTSBz(bFieldPositions[2], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
-                    const float_64 By1_rot=-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1+cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
-                    const float_64 Bz1_rot=-cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*By1-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz1;    // for rotating back the Field-Vektors.
-                    const float_64 By2_rot=-sin(-(::picongpu::bgrTWTS::SI::PHI_SI))*By2+cos(-(::picongpu::bgrTWTS::SI::PHI_SI))*Bz2;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
-                    const float_64 Bz2_rot=-cos(-(::picongpu::bgrTWTS::SI::PHI_SI))*By2-sin(-(::picongpu::bgrTWTS::SI::PHI_SI))*Bz2;    // for rotating back the Field-Vektors.
+                    // Input vectors vectors have to be tailored according to the PIConGPU grid of field positions. (i.e. fields at different bFieldPositions[i] must not mix in matrix)
+                    const float_64 By_y_1=calcTWTSBy(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI)); //By for the rotated By-component and the 1st beam
+                    const float_64 By_z_1=calcTWTSBy(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI)); //By for the rotated Bz-component and the 1st beam
+                    const float_64 By_y_2=calcTWTSBy(bFieldPositions[1], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI)); //The same for the second beam.
+                    const float_64 By_z_2=calcTWTSBy(bFieldPositions[2], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 Bz_y_1=calcTWTSBz(bFieldPositions[1], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI)); //Bz for both beams and both rotated field components
+                    const float_64 Bz_z_1=calcTWTSBz(bFieldPositions[2], time, halfSimSize, +(::picongpu::bgrTWTS::SI::PHI_SI));
+					const float_64 Bz_y_2=calcTWTSBz(bFieldPositions[1], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 Bz_z_2=calcTWTSBz(bFieldPositions[2], time, halfSimSize, -(::picongpu::bgrTWTS::SI::PHI_SI));
+                    const float_64 By1_rot=-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*By_y_1+cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz_y_1;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
+                    const float_64 Bz1_rot=-cos(+(::picongpu::bgrTWTS::SI::PHI_SI))*By_z_1-sin(+(::picongpu::bgrTWTS::SI::PHI_SI))*Bz_z_1;    // for rotating back the Field-Vektors.
+                    const float_64 By2_rot=-sin(-(::picongpu::bgrTWTS::SI::PHI_SI))*By_y_2+cos(-(::picongpu::bgrTWTS::SI::PHI_SI))*Bz_y_2;	// RotationMatrix[-(PI/2+phiReal)].(y,z)
+                    const float_64 Bz2_rot=-cos(-(::picongpu::bgrTWTS::SI::PHI_SI))*By_z_2-sin(-(::picongpu::bgrTWTS::SI::PHI_SI))*Bz_z_2;    // for rotating back the Field-Vektors.
 					return float3_X(0.0, (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*(By1_rot+By2_rot)/ unitField[1], (::picongpu::bgrTWTS::SI::AMPLITUDE_SI)*(Bz1_rot+Bz2_rot)/ unitField[1]);
 #elif( SIMDIM == DIM2 )
 					const float3_X dim2PosBx = float3_X( 0.0, (bFieldPositions[0]).y(), (bFieldPositions[0]).x() );
