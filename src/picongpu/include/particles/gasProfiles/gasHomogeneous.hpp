@@ -47,6 +47,8 @@ namespace picongpu
         {
             if (pos.y() < VACUUM_Y
                 || pos.y() >= (GAS_LENGTH + VACUUM_Y)) return float_X(0.0);
+            if (pos.z() < VACUUM_Z
+                || pos.z() >= (VACUUM_Z_LENGTH + VACUUM_Z)) return float_X(0.0);
 
             return float_X(1.0);
         }
