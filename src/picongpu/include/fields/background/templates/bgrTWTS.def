@@ -48,6 +48,7 @@ namespace picongpu
 
             const float_64 tdelay_user;
             const bool auto_tdelay;
+            const uint32_t numComponents;
 
             /** Electric field of the electric field in the TW
              *
@@ -130,6 +131,7 @@ namespace picongpu
 
             const float_64 tdelay_user;
             const bool auto_tdelay;
+            const uint32_t numComponents
             
             HDINLINE
             TWTSFieldB();

@@ -135,18 +135,21 @@ namespace picongpu
             return eFieldPositions_SI;
         }
         
-        HDINLINE float_64 getTime_SI(const uint32_t currentStep) const
+        HDINLINE float_64
+        TWTSFieldE::getTime_SI(const uint32_t currentStep) const
         {
-            const float_64 time_SI=currentStep*::picongpu::SI::DELTA_T_SI;
+            const float_64 time_SI=currentStep*picongpu::SI::DELTA_T_SI;
                        
             if ( auto_tdelay ) {
                 
+                // angle between the laser pulse front and the y-axis. (Good approximation for beta0 \simeq 1. For exact relation look in TWTS core routines for Ex, By or Bz.)
+                const float_64 eta = PI/2 - (phi/2);
                 /* halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff
-                 * of the TWTS-pulse. The abs()-function is for keeping the same offset for -phiReal and +phiReal. */
-                const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/abs(tan(eta)); 
+                 * of the TWTS-pulse. The abs()-function is for correct offset for -phiReal<-90Deg and +phiReal>+90Deg. */
+                const float_64 y1=precisionCast<float_64>(halfSimSize[2]*picongpu::SI::CELL_DEPTH_SI)*abs(cos(eta)); 
                 const float_64 m=3.; // Fudge parameter to make sure, that TWTS pulse starts to impact simulation volume at low intensity values.
-                const float_64 y2=(tauG/2*cspeed)/sin(eta)*m; // pulse length projected on y-axis, scaled with "fudge factor" m.
-                const float_64 y3=::picongpu::bgrTWTS::SI::FOCUS_POS_SI; // Position of maximum intensity in simulation volume along y
+                const float_64 y2=m*(tauG/2*cspeed)/cos(eta); // Approximate cross section of laser pulse through y-axis, scaled with "fudge factor" m.
+                const float_64 y3=focus_y_SI; // y-position of laser coordinate system origin within simulation.
                 const float_64 tdelay= (y1+y2+y3)/(cspeed*beta0);
                 
                 return time-tdelay;
@@ -155,28 +158,29 @@ namespace picongpu
                 return time-tdelay_user_SI;
         }
         
-        HDINLINE float3_X getTWTSEfield_SI<DIM3>( const PMacc::math::Vector<floatD_64,FieldE::numComponents>& eFieldPositions_SI,
+        HDINLINE float3_X
+        TWTSFieldE::getTWTSEfield_SI<DIM3>( const PMacc::math::Vector<floatD_64,FieldE::numComponents>& eFieldPositions_SI,
                                                   const float_64 time) const;
         {
-            return float3_X( precisionCast<float_X>( calcTWTSEx(eFieldPositions_SI[0],time,halfSimSize, phi) ), floatX( 0. ), float_X( 0. ) );
+            return float3_X( precisionCast<float_X>( calcTWTSEx(eFieldPositions_SI[0],time,halfSimSize,phi)/unitField[0] ), float_X(0.), float_X(0.) );
         }
         
-        HDINLINE float3_X getTWTSEfield_SI<DIM2>( const PMacc::math::Vector<floatD_64,FieldE::numComponents>& eFieldPositions_SI,
+        HDINLINE float3_X
+        TWTSFieldE::getTWTSEfield_SI<DIM2>( const PMacc::math::Vector<floatD_64,FieldE::numComponents>& eFieldPositions_SI,
                                                   const float_64 time) const;
         {
             // Ex->Ez, so also the grid cell offset for Ez has to be used.
-            return float3_X( float_X( 0. ), float_X( 0. ), calcTWTSEx(eFieldPositions_SI[2],time,halfSimSize, phi) );
+            return float3_X( float_X(0.), float_X(0.), precisionCast<float_X>( calcTWTSEx(eFieldPositions_SI[2],time,halfSimSize,phi)/unitField[2] ) );
         }
         
         HDINLINE float3_X
         TWTSFieldE::operator()( const DataSpace<simDim>& cellIdx,
                                 const uint32_t currentStep ) const
         {
-            /** \todo fixme, can be done without SI */
             const float_64 time=getTime_SI(currentStep);
             const PMacc::math::Vector<floatD_64,FieldE::numComponents> eFieldPositions_SI=getFieldPosition(cellIdx);
             // Single TWTS-Pulse
-            return getTWTSEfield(eFieldPositions_SI, time, halfSimSize, phi);
+            return getTWTSEfield(eFieldPositions_SI, time);
         }
 
         /** Calculate the Ex(r,t) field here
@@ -186,10 +190,10 @@ namespace picongpu
          * \param halfSimSize Center of simulation volume in number of cells
          * \param phi interaction angle between TWTS laser propagation vector and the y-axis */
         HDINLINE float_64
-        TWTSFieldE::calcTWTSEx( const floatD_64& pos, const float_X time, const DataSpace<simDim> halfSimSize, const float_X phi ) const
+        TWTSFieldE::calcTWTSEx( const floatD_64& pos, const float_64 time) const
         {
             
-            return float_X(0.);
+            return float_64(0.);
         }
 
         /* Here comes the B-field part of the TWTS laser pulse. */
@@ -290,18 +294,21 @@ namespace picongpu
             return bFieldPositions_SI;
         }
         
-        HDINLINE float_64 getTime_SI(const uint32_t currentStep) const
+        HDINLINE float_64
+        TWTSFieldB::getTime_SI(const uint32_t currentStep) const
         {
             const float_64 time_SI=currentStep*picongpu::SI::DELTA_T_SI;
                        
             if ( auto_tdelay ) {
                 
+                // angle between the laser pulse front and the y-axis. (Good approximation for beta0 \simeq 1. For exact relation look in TWTS core routines for Ex, By or Bz.)
+                const float_64 eta = PI/2 - (phi/2);
                 /* halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric projection we calculate the y-distance walkoff
-                 * of the TWTS-pulse. The abs()-function is for keeping the same offset for -phiReal and +phiReal. */
-                const float_64 y1=(float_64)(halfSimSize[2]*::picongpu::SI::CELL_DEPTH_SI)/abs(tan(eta)); 
+                 * of the TWTS-pulse. The abs()-function is for correct offset for -phiReal<-90Deg and +phiReal>+90Deg. */
+                const float_64 y1=precisionCast<float_64>(halfSimSize[2]*picongpu::SI::CELL_DEPTH_SI)*abs(cos(eta)); 
                 const float_64 m=3.; // Fudge parameter to make sure, that TWTS pulse starts to impact simulation volume at low intensity values.
-                const float_64 y2=(tauG/2*cspeed)/sin(eta)*m; // pulse length projected on y-axis, scaled with "fudge factor" m.
-                const float_64 y3=::picongpu::bgrTWTS::SI::FOCUS_POS_SI; // Position of maximum intensity in simulation volume along y
+                const float_64 y2=m*(tauG/2*cspeed)/cos(eta); // Approximate cross section of laser pulse through y-axis, scaled with "fudge factor" m.
+                const float_64 y3=focus_y_SI; // y-position of laser coordinate system origin within simulation.
                 const float_64 tdelay= (y1+y2+y3)/(cspeed*beta0);
                 
                 return time-tdelay;
@@ -310,7 +317,8 @@ namespace picongpu
                 return time-tdelay_user_SI;
         }
         
-        HDINLINE float3_X getTWTSBfield_SI<DIM3>( const PMacc::math::Vector<floatD_64,FieldB::numComponents>& bFieldPositions_SI,
+        HDINLINE float3_X
+        TWTSFieldB::getTWTSBfield_SI<DIM3>( const PMacc::math::Vector<floatD_64,FieldB::numComponents>& bFieldPositions_SI,
                                                   const float_64 time) const;
         {
             const float_64 By_By=calcTWTSBy(bFieldPositions[1], time, halfSimSize, phi); // Calculate By-component with the Yee-Cell offset of a By-field
@@ -321,14 +329,24 @@ namespace picongpu
             const float_64 By_rot=-sin(+phi)*By_By+cos(+phi)*Bz_By;  // RotationMatrix[-(PI/2+phiReal)].(y,z)
             const float_64 Bz_rot=-cos(+phi)*By_Bz-sin(+phi)*Bz_Bz;  // for rotating back the Field-Vektors.
             
-            return float3_X( precisionCast<float_X>( calcTWTSEx(bFieldPositions_SI[0],time,halfSimSize, phi) ), floatX( 0. ), float_X( 0. ) );
+            // Finally, the B-field in PIConGPU units.
+            return float3_X( float_X(0.0), precisionCast<float_X>(By_rot/unitField[1]), precisionCast<float_X>(Bz_rot/unitField[2]) );
         }
         
         HDINLINE float3_X getTWTSBfield_SI<DIM2>( const PMacc::math::Vector<floatD_64,FieldB::numComponents>& bFieldPositions_SI,
                                                   const float_64 time) const;
         {
-            // By->By and Bz->-Bx, so also the grid cell offset for Bx has to be used.
-            return float3_X( float_X( 0. ), float_X( 0. ), calcTWTSEx(bFieldPositions_SI[2],time,halfSimSize, phi) );
+            // By->By and Bz->-Bx, so the grid cell offset for Bx has to be used instead of Bz. Mind the -sign.
+            const float_64 By_By= calcTWTSBy(bFieldPositions[1], time, halfSimSize, phi); // Calculate By-component with the Yee-Cell offset of a By-field
+            const float_64 Bx_By=-calcTWTSBx(bFieldPositions[1], time, halfSimSize, phi); // Calculate Bx-component with the Yee-Cell offset of a By-field
+            const float_64 By_Bx= calcTWTSBy(bFieldPositions[0], time, halfSimSize, phi);
+            const float_64 Bx_Bx=-calcTWTSBx(bFieldPositions[0], time, halfSimSize, phi);
+            /* Since we rotated all position vectors before calling calcTWTSBy and calcTWTSBz, we need to back-rotate the resulting B-field vector. */
+            const float_64 By_rot=-sin(phi)*By_By+cos(phi)*Bz_By;  // RotationMatrix[-(PI/2+phiReal)].(y,z)
+            const float_64 Bx_rot=-cos(phi)*By_Bx-sin(phi)*Bz_Bx;  // for rotating back the Field-Vektors.
+            
+            // Finally, the B-field in PIConGPU units.
+            return float3_X( float_X(0.0), precisionCast<float_X>(By_rot/unitField[1]), precisionCast<float_X>(Bz_rot/unitField[2]) );
         }
         
         HDINLINE float3_X
@@ -341,27 +359,23 @@ namespace picongpu
         /** Calculate the By(r,t) field
          *
          * \param pos Spatial position of the target field.
-         * \param time Absolute time (SI, including all offsets and transformations) for calculating the field
-         * \param halfSimSize Center of simulation volume in number of cells
-         * \param phiReal interaction angle between TWTS laser propagation vector and the y-axis */
-        HDINLINE float_X
-        TWTSFieldB::calcTWTSBy( const float3_X& pos, const float_X time, const DataSpace<simDim> halfSimSize, const float_X phiReal ) const
+         * \param time Absolute time (SI, including all offsets and transformations) for calculating the field */
+        HDINLINE float_64
+        TWTSFieldB::calcTWTSBy( const float3_64& pos, const float_64 time ) const
         {
 
-            return float_X(0.);
+            return float_64(0.);
         }
         
         /** Calculate the Bz(r,t) field here
          *
          * \param pos Spatial position of the target field.
-         * \param time Absolute time (SI, including all offsets and transformations) for calculating the field
-         * \param halfSimSize Center of simulation volume in number of cells
-         * \param phiReal interaction angle between TWTS laser propagation vector and the y-axis */
-        HDINLINE float_X
-        TWTSFieldB::calcTWTSBz( const float3_X& pos, const float_X time, const DataSpace<simDim> halfSimSize, const float_X phiReal ) const
+         * \param time Absolute time (SI, including all offsets and transformations) for calculating the field */
+        HDINLINE float_64
+        TWTSFieldB::calcTWTSBz( const float3_64& pos, const float_64 time ) const
         {
 
-            return float_X(0.);
+            return float_64(0.);
         }
 
     } /* namespace templates */
