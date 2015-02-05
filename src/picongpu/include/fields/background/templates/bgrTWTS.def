@@ -109,8 +109,7 @@ namespace picongpu
             /** Specify your background field B(r,t) here
              *
              * \param cellIdx The total cell id counted from the start at t=0
-             * \param currentStep The current time step
-             * \param halfSimSize Center of simulation volume in number of cells */
+             * \param currentStep The current time step */
             HDINLINE float3_X
             operator()( const DataSpace<simDim>& cellIdx,
                         const uint32_t currentStep ) const;
@@ -119,7 +118,6 @@ namespace picongpu
              *
              * \param pos Spatial position of the target field.
              * \param time Absolute time (SI, including all offsets and transformations) for calculating the field
-             * \param halfSimSize Center of simulation volume in number of cells
              * \param phiReal interaction angle between TWTS laser propagation vector and the y-axis */
             HDINLINE float_X
             calcTWTSBy( const float3_X& pos, const float_X time, const DataSpace<simDim> halfSimSize, const float_X phiReal ) const;
@@ -128,7 +126,6 @@ namespace picongpu
              *
              * \param pos Spatial position of the target field.
              * \param time Absolute time (SI, including all offsets and transformations) for calculating the field
-             * \param halfSimSize Center of simulation volume in number of cells
              * \param phiReal interaction angle between TWTS laser propagation vector and the y-axis */
             HDINLINE float_X
             calcTWTSBz( const float3_X& pos, const float_X time, const DataSpace<simDim> halfSimSize, const float_X phiReal ) const;
