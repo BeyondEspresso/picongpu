@@ -53,7 +53,7 @@ namespace picongpu
             const float_64 tdelay_user_SI;          // If auto_tdelay=FALSE, then a user defined delay is used. [second]
             
             const static int numComponents=DIM3;    // Number of field components used in the simulation. [Default: 3 for both 2D and 3D]
-            const float3_64 unitField;             // takes the normalization factor
+            const float3_64 unitField;              // takes the normalization factor
             
             /** Electric field of the electric field in the TW
              *
@@ -74,10 +74,10 @@ namespace picongpu
                         const float_64 w_x_SI,
                         const float_64 w_y_SI,
                         const float3_64& unitField,
-                        const float_X phi,//               = 90.*(PI/180.),
-                        const float_X beta_0,//            = 1.0,
-                        const float_64 tdelay_user_SI,//   = 0.0,
-                        const bool auto_tdelay);//          = true );
+                        const float_X phi               = 90.*(PI/180.),
+                        const float_X beta_0            = 1.0,
+                        const float_64 tdelay_user_SI   = 0.0,
+                        const bool auto_tdelay          = true );
 
             /** Specify your background field E(r,t) here
              *
@@ -148,10 +148,10 @@ namespace picongpu
                         const float_64 w_x_SI,
                         const float_64 w_y_SI,
                         const float3_64& unitField,
-                        const float_X phi,//               = 90.*(PI/180.),
-                        const float_X beta_0,//            = 1.0,
-                        const float_64 tdelay_user_SI,//   = 0.0,
-                        const bool auto_tdelay);//          = true );
+                        const float_X phi               = 90.*(PI/180.),
+                        const float_X beta_0            = 1.0,
+                        const float_64 tdelay_user_SI   = 0.0,
+                        const bool auto_tdelay          = true );
             
             /** Specify your background field B(r,t) here
              *

@@ -63,7 +63,7 @@ namespace picongpu
                                               30.0e-15 / 2.35482, /* pulselength [s] */
                                               20.0e-6,            /* w_x [m] */
                                               0.01,               /* w_y [m] */
-                                              unitField, 90.*(PI/180.), 1.0, 0.0, true  );        /* pass unitField */
+                                              unitField );        /* pass unitField */
             
             return amplitude * twtsFieldE( cellIdx, currentStep );
 
@@ -112,7 +112,7 @@ namespace picongpu
                                               30.0e-15 / 2.35482, /* pulselength [s] */
                                               20.0e-6,            /* w_x [m] */
                                               0.01,               /* w_y [m] */
-                                              unitField, 90.*(PI/180.), 1.0, 0.0, true );        /* pass unitField */
+                                              unitField );        /* pass unitField */
 
             return amplitude * twtsFieldB( cellIdx, currentStep );
             // zero dummy - no B field
