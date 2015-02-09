@@ -342,10 +342,10 @@ public:
         if( step != 0 )
         {
             namespace nvfct = PMacc::nvidia::functors;
-            (*pushBGField)( fieldE, nvfct::Sub(), fieldBackgroundE(fieldE->getUnit()),
-                            step, fieldBackgroundE::InfluenceParticlePusher);
-            (*pushBGField)( fieldB, nvfct::Sub(), fieldBackgroundB(fieldB->getUnit()),
-                            step, fieldBackgroundB::InfluenceParticlePusher);
+            (*pushBGField)( fieldE, nvfct::Sub(), FieldBackgroundE(fieldE->getUnit()),
+                            step, FieldBackgroundE::InfluenceParticlePusher);
+            (*pushBGField)( fieldB, nvfct::Sub(), FieldBackgroundB(fieldB->getUnit()),
+                            step, FieldBackgroundB::InfluenceParticlePusher);
         }
 
         // communicate all fields
@@ -384,18 +384,18 @@ public:
         __setTransactionEvent(updateEvent);
 
         /** remove background field for particle pusher */
-        (*pushBGField)(fieldE, nvfct::Sub(), fieldBackgroundE(fieldE->getUnit()),
-                       currentStep, fieldBackgroundE::InfluenceParticlePusher);
-        (*pushBGField)(fieldB, nvfct::Sub(), fieldBackgroundB(fieldB->getUnit()),
-                       currentStep, fieldBackgroundB::InfluenceParticlePusher);
+        (*pushBGField)(fieldE, nvfct::Sub(), FieldBackgroundE(fieldE->getUnit()),
+                       currentStep, FieldBackgroundE::InfluenceParticlePusher);
+        (*pushBGField)(fieldB, nvfct::Sub(), FieldBackgroundB(fieldB->getUnit()),
+                       currentStep, FieldBackgroundB::InfluenceParticlePusher);
 
         this->myFieldSolver->update_beforeCurrent(currentStep);
 
         fieldJ->clear();
 
         __setTransactionEvent(commEvent);
-        (*currentBGField)(fieldJ, nvfct::Add(), fieldBackgroundJ(fieldJ->getUnit()),
-                          currentStep, fieldBackgroundJ::activated);
+        (*currentBGField)(fieldJ, nvfct::Add(), FieldBackgroundJ(fieldJ->getUnit()),
+                          currentStep, FieldBackgroundJ::activated);
 #if (ENABLE_CURRENT == 1)
         ForEach<VectorAllSpecies, ComputeCurrent<bmpl::_1,bmpl::int_<CORE + BORDER> >, MakeIdentifier<bmpl::_1> > computeCurrent;
         computeCurrent(forward(fieldJ),forward(particleStorage), currentStep);
@@ -430,10 +430,10 @@ public:
          */
         namespace nvfct = PMacc::nvidia::functors;
 
-        (*pushBGField)( fieldE, nvfct::Add(), fieldBackgroundE(fieldE->getUnit()),
-                        currentStep, fieldBackgroundE::InfluenceParticlePusher );
-        (*pushBGField)( fieldB, nvfct::Add(), fieldBackgroundB(fieldB->getUnit()),
-                        currentStep, fieldBackgroundB::InfluenceParticlePusher );
+        (*pushBGField)( fieldE, nvfct::Add(), FieldBackgroundE(fieldE->getUnit()),
+                        currentStep, FieldBackgroundE::InfluenceParticlePusher );
+        (*pushBGField)( fieldB, nvfct::Add(), FieldBackgroundB(fieldB->getUnit()),
+                        currentStep, FieldBackgroundB::InfluenceParticlePusher );
     }
 
     void resetAll(uint32_t currentStep)
