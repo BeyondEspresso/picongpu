@@ -48,6 +48,8 @@ namespace picongpu
             const PMACC_ALIGN(beta_0,float_X);          // propagation speed of TWTS laser overlap normalized to the speed of light. [Default: beta0=1.0]
             const PMACC_ALIGN(tdelay_user_SI,float_64); // If auto_tdelay=FALSE, then a user defined delay is used. [second]
             const PMACC_ALIGN(unitField,float3_64);     // takes the normalization factor
+            const PMACC_ALIGN(dt,float_64);             // Make constants accessible to device.
+            const PMACC_ALIGN(unit_length,float_64);    // Make constants accessible to device.
             const PMACC_ALIGN(auto_tdelay,bool);        // Should the TWTS laser delay be chosen automatically,
                                                         // such that the laser gradually enters the simulation volume? [Default: TRUE]
             
@@ -132,6 +134,8 @@ namespace picongpu
             const PMACC_ALIGN(beta_0,float_X);          // propagation speed of TWTS laser overlap normalized to the speed of light. [Default: beta0=1.0]
             const PMACC_ALIGN(tdelay_user_SI,float_64); // If auto_tdelay=FALSE, then a user defined delay is used. [second]
             const PMACC_ALIGN(unitField,float3_64);     // takes the normalization factor
+            const PMACC_ALIGN(dt,float_64);             // Make constants accessible to device.
+            const PMACC_ALIGN(unit_length,float_64);    // Make constants accessible to device.
             const PMACC_ALIGN(auto_tdelay,bool);        // Should the TWTS laser delay be chosen automatically,
                                                         // such that the laser gradually enters the simulation volume? [Default: TRUE]
             
