@@ -102,28 +102,25 @@ namespace picongpu
         {
             /* Note: Neither direct precisionCast on picongpu::cellSize
                      or casting on floatD_ does work. */
-            //floatD_X cellDim;
-            //for (uint32_t i = 0; i<simDim;++i) cellDim[i] = picongpu::cellSize[i];
-            const floatD_X cellDim(picongpu::cellSize);
-            const float3_64 cellDimensions = 
-                precisionCast<float_64>( detail::dummyCast(cellDim) ) * unit_length;
+            const floatD_64 cellDim(picongpu::cellSize);
+            const floatD_64 cellDimensions = cellDim * unit_length;
             
             /* TWTS laser coordinate origin is centered transversally and defined longitudinally
              * by the laser center (usually maximum of intensity) in y. */
-            float3_X laserOrigin = detail::dummyCast( floatD_X(halfSimSize) );
-            laserOrigin[1] = float_X( focus_y_SI/cellDimensions.y() );
+            floatD_X laserOrigin = precisionCast<float_X>(halfSimSize);
+            laserOrigin.y() = float_X( focus_y_SI/cellDimensions.y() );
             
             /* For the Yee-Cell shifted fields, obtain the fractional cell index components and
              * add that to the total cell indices. The physical field coordinate origin is
              * transversally centered with respect to the global simulation volume. */
-            PMacc::math::Vector<float3_X, detail::numComponents> eFieldPositions = 
-                            detail::dummyCast(fieldSolver::NumericalCellType::getEFieldPosition());
+            PMacc::math::Vector<floatD_X, detail::numComponents> eFieldPositions = 
+                            fieldSolver::NumericalCellType::getEFieldPosition();
             
-            PMacc::math::Vector<float3_64,detail::numComponents> eFieldPositions_SI;
+            PMacc::math::Vector<floatD_64,detail::numComponents> eFieldPositions_SI;
             
             for( uint32_t i = 0; i < detail::numComponents; ++i ) // cellIdx Ex, Ey and Ez
             {
-                eFieldPositions[i]   += ( detail::dummyCast( floatD_X(cellIdx) ) - laserOrigin );
+                eFieldPositions[i]   += ( precisionCast<float_X>(cellIdx) - laserOrigin );
                 eFieldPositions_SI[i] = precisionCast<float_64>(eFieldPositions[i])
                                         * cellDimensions;
                 
@@ -134,9 +131,10 @@ namespace picongpu
                  *  phi to determine the required amount of pulse front tilt.
                  *  RotationMatrix[PI/2+phi].(y,z) (180Deg-flip at phi=90Deg since coordinate
                  *  system in paper is oriented the other way round.) */
-                eFieldPositions_SI[i] = float3_64( eFieldPositions_SI[i].x(),
+                eFieldPositions_SI[i] = rotateFields( eFieldPositions_SI[i], phi );
+				/* eFieldPositions_SI[i] = float3_64( eFieldPositions_SI[i].x(),
                    -sin(phi)*eFieldPositions_SI[i].y()-cos(phi)*eFieldPositions_SI[i].z(),
-                   +cos(phi)*eFieldPositions_SI[i].y()-sin(phi)*eFieldPositions_SI[i].z() );
+                   +cos(phi)*eFieldPositions_SI[i].y()-sin(phi)*eFieldPositions_SI[i].z() );*/
             }
             
             return eFieldPositions_SI;
