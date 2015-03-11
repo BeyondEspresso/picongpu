@@ -39,6 +39,41 @@ namespace picongpu
     {
         namespace pmMath = PMacc::algorithms::math;
         
+        namespace detail
+        {
+            template <typename T_type>
+            class rotateField
+            {
+                public:
+                HDINLINE T_type
+                operator()( const T_type fieldVector,
+                            const float_X phi ) const;
+                                
+            };
+            
+            template <>
+            HDINLINE float3_64
+            rotateField<float3_64>::operator()( const float3_64 fieldVector,
+                                                const float_X phi ) const
+            {
+                return float3_64(
+                    fieldVector.x(),
+                   -sin(float_64(phi))*fieldVector.y()-cos(float_64(phi))*fieldVector.z() ,
+                   +cos(float_64(phi))*fieldVector.y()-sin(float_64(phi))*fieldVector.z() );
+            }
+            
+            template <>
+            HDINLINE float2_64
+            rotateField<float2_64>::operator()( const float2_64 fieldVector,
+                                                const float_X phi ) const
+            {   
+                return float2_64(
+                    -sin(float_64(phi))*fieldVector.x()-cos(float_64(phi))*fieldVector.y() ,
+                    +cos(float_64(phi))*fieldVector.x()-sin(float_64(phi))*fieldVector.y() );
+            }
+            
+        }
+                
         HINLINE
         TWTSFieldE::TWTSFieldE( const float_64 focus_y_SI,
                                 const float_64 wavelength_SI,
@@ -67,43 +102,43 @@ namespace picongpu
         {
             /* Note: Neither direct precisionCast on picongpu::cellSize
                      or casting on floatD_ does work. */
-            floatD_X cellDim;
-            for (uint32_t i = 0; i<simDim;++i) cellDim[i] = picongpu::cellSize[i];
-                //const floatD_X cellDim = picongpu::cellSize;
-                const float3_64 cellDimensions = 
-                    precisionCast<float_64>( detail::dummyCast(cellDim) ) * unit_length;
+            //floatD_X cellDim;
+            //for (uint32_t i = 0; i<simDim;++i) cellDim[i] = picongpu::cellSize[i];
+            const floatD_X cellDim(picongpu::cellSize);
+            const float3_64 cellDimensions = 
+                precisionCast<float_64>( detail::dummyCast(cellDim) ) * unit_length;
+            
+            /* TWTS laser coordinate origin is centered transversally and defined longitudinally
+             * by the laser center (usually maximum of intensity) in y. */
+            float3_X laserOrigin = detail::dummyCast( floatD_X(halfSimSize) );
+            laserOrigin[1] = float_X( focus_y_SI/cellDimensions.y() );
+            
+            /* For the Yee-Cell shifted fields, obtain the fractional cell index components and
+             * add that to the total cell indices. The physical field coordinate origin is
+             * transversally centered with respect to the global simulation volume. */
+            PMacc::math::Vector<float3_X, detail::numComponents> eFieldPositions = 
+                            detail::dummyCast(fieldSolver::NumericalCellType::getEFieldPosition());
+            
+            PMacc::math::Vector<float3_64,detail::numComponents> eFieldPositions_SI;
+            
+            for( uint32_t i = 0; i < detail::numComponents; ++i ) // cellIdx Ex, Ey and Ez
+            {
+                eFieldPositions[i]   += ( detail::dummyCast( floatD_X(cellIdx) ) - laserOrigin );
+                eFieldPositions_SI[i] = precisionCast<float_64>(eFieldPositions[i])
+                                        * cellDimensions;
                 
-                /* TWTS laser coordinate origin is centered transversally and defined longitudinally
-                 * by the laser center (usually maximum of intensity) in y. */
-                float3_X laserOrigin = detail::dummyCast( floatD_X(halfSimSize) );
-                laserOrigin[1] = float_X( focus_y_SI/cellDimensions.y() );
-                
-                /* For the Yee-Cell shifted fields, obtain the fractional cell index components and
-                 * add that to the total cell indices. The physical field coordinate origin is
-                 * transversally centered with respect to the global simulation volume. */
-                PMacc::math::Vector<float3_X, detail::numComponents> eFieldPositions = 
-                                    detail::dummyCast(fieldSolver::NumericalCellType::getEFieldPosition());
-                
-                PMacc::math::Vector<float3_64,detail::numComponents> eFieldPositions_SI;
-                
-                for( uint32_t i = 0; i < detail::numComponents; ++i ) // cellIdx Ex, Ey and Ez
-                {
-                    eFieldPositions[i]   += ( detail::dummyCast( floatD_X(cellIdx) ) - laserOrigin );
-                    eFieldPositions_SI[i] = precisionCast<float_64>(eFieldPositions[i])
-                                            * cellDimensions;
-                    
-                    /*  Since, the laser propagation direction encloses an angle of phi with the
-                     *  simulation y-axis (i.e. direction of sliding window), the positions vectors
-                     *  are rotated around the simulation x-axis before calling the TWTS field
-                     *  functions. Note: The TWTS field functions are in non-rotated frame and only
-                     *  use the angle phi to determine the required amount of pulse front tilt.
-                     *  RotationMatrix[PI/2+phi].(y,z) (180Deg-flip at phi=90Deg since coordinate
-                     *  system in paper is oriented the other way round.) */
-                    eFieldPositions_SI[i] = float3_64( eFieldPositions_SI[i].x(),
-                       -sin(phi)*eFieldPositions_SI[i].y()-cos(phi)*eFieldPositions_SI[i].z(),
-                       +cos(phi)*eFieldPositions_SI[i].y()-sin(phi)*eFieldPositions_SI[i].z() );
-                }
-             
+                /*  Since, the laser propagation direction encloses an angle of phi with the
+                 *  simulation y-axis (i.e. direction of sliding window), the positions vectors are
+                 *  rotated around the simulation x-axis before calling the TWTS field functions.
+                 *  Note: The TWTS field functions are in non-rotated frame and only use the angle
+                 *  phi to determine the required amount of pulse front tilt.
+                 *  RotationMatrix[PI/2+phi].(y,z) (180Deg-flip at phi=90Deg since coordinate
+                 *  system in paper is oriented the other way round.) */
+                eFieldPositions_SI[i] = float3_64( eFieldPositions_SI[i].x(),
+                   -sin(phi)*eFieldPositions_SI[i].y()-cos(phi)*eFieldPositions_SI[i].z(),
+                   +cos(phi)*eFieldPositions_SI[i].y()-sin(phi)*eFieldPositions_SI[i].z() );
+            }
+            
             return eFieldPositions_SI;
         }
          
