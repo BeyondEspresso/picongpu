@@ -131,7 +131,7 @@ namespace picongpu
                  *  phi to determine the required amount of pulse front tilt.
                  *  RotationMatrix[PI/2+phi].(y,z) (180Deg-flip at phi=90Deg since coordinate
                  *  system in paper is oriented the other way round.) */
-                eFieldPositions_SI[i] = rotateFields( eFieldPositions_SI[i], phi );
+                eFieldPositions_SI[i] = detail::rotateField<floatD_64>()( eFieldPositions_SI[i], phi );
 				/* eFieldPositions_SI[i] = float3_64( eFieldPositions_SI[i].x(),
                    -sin(phi)*eFieldPositions_SI[i].y()-cos(phi)*eFieldPositions_SI[i].z(),
                    +cos(phi)*eFieldPositions_SI[i].y()-sin(phi)*eFieldPositions_SI[i].z() );*/
