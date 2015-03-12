@@ -147,7 +147,7 @@ namespace picongpu
              * \tparam T_dim Specializes for the simulation dimension
              * \param cellIdx The total cell id counted from the start at timestep 0. */
             template <unsigned T_dim>
-            HDINLINE PMacc::math::Vector<float3_64,detail::numComponents>
+            HDINLINE PMacc::math::Vector<floatD_64,detail::numComponents>
             getEfieldPositions_SI(const DataSpace<simDim>& cellIdx) const;
             
             /** Calculate the E-field vector of the TWTS laser in SI units.
@@ -157,7 +157,7 @@ namespace picongpu
             template <unsigned T_dim>
             HDINLINE float3_X
             getTWTSEfield_Normalized(
-                    const PMacc::math::Vector<float3_64,detail::numComponents>& eFieldPositions_SI,
+                    const PMacc::math::Vector<floatD_64,detail::numComponents>& eFieldPositions_SI,
                     const float_64 time) const;
             
             /** Obtain the SI time that later enters the Ex(r, t) calculations as r.
@@ -244,7 +244,7 @@ namespace picongpu
              * \tparam T_dim Specializes for the simulation dimension
              * \param cellIdx The total cell id counted from the start at timestep 0. */
             template<unsigned T_dim>
-            HDINLINE PMacc::math::Vector<float3_64,detail::numComponents>
+            HDINLINE PMacc::math::Vector<floatD_64,detail::numComponents>
             getBfieldPositions_SI(const DataSpace<simDim>& cellIdx) const;
             
             /** Calculate the B-field vector of the TWTS laser in SI units.
@@ -254,7 +254,7 @@ namespace picongpu
             template<unsigned T_dim>
             HDINLINE float3_X
             getTWTSBfield_Normalized(
-                    const PMacc::math::Vector<float3_64,detail::numComponents>& eFieldPositions_SI,
+                    const PMacc::math::Vector<floatD_64,detail::numComponents>& eFieldPositions_SI,
                     const float_64 time) const;
             
             /** Obtain the SI time that later enters the By(r, t) and Bz(r, t) calculations as r.
