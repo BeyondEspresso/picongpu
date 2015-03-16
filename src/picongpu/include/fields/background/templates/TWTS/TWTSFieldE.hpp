@@ -24,21 +24,13 @@
 
 #include "math/Vector.hpp"
 #include "dimensions/DataSpace.hpp"
-
+#include "fields/background/templates/TWTS/numComponents.hpp"
 
 namespace picongpu
 {
-/** Load external TWTS field
- *
- */
+/** Load pre-defined background field */
 namespace templates
 {
-namespace detail
-{
-    /* Number of field components used in the simulation. [Default: 3 for both 2D and 3D] */
-    const uint32_t numComponents=DIM3;
-    
-} /* namespace detail */
         
 class TWTSFieldE
 {

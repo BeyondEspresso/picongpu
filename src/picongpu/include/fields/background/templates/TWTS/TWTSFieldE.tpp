@@ -18,11 +18,25 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
+#include "types.h"
+#include "simulation_defines.hpp"
+#include "simulation_classTypes.hpp"
+
+#include "math/Vector.hpp"
+#include "dimensions/DataSpace.hpp"
+#include "mappings/simulation/SubGrid.hpp"
+#include "math/Complex.hpp"
+
+#include "fields/background/templates/TWTS/RotateField.tpp"
+#include "fields/background/templates/TWTS/Get_tdelay_SI.tpp"
+#include "fields/background/templates/TWTS/getFieldPositions_SI.tpp"
+#include "fields/background/templates/TWTS/TWTSFieldE.hpp"
+
 namespace picongpu
 {
-/** Load external TWTS field
- *
- */
+/** Load pre-defined background field */
 namespace templates
 {
 namespace pmMath = PMacc::algorithms::math;

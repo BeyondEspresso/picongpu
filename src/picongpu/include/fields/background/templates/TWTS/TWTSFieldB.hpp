@@ -24,16 +24,14 @@
 
 #include "math/Vector.hpp"
 #include "dimensions/DataSpace.hpp"
-
+#include "fields/background/templates/TWTS/numComponents.hpp"
 
 namespace picongpu
 {
-/** Load external TWTS field
- *
- */
+/** Load pre-defined background field */
 namespace templates
 {
-        
+
 class TWTSFieldB
 {
 public:

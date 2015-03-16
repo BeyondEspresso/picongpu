@@ -18,11 +18,25 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
+#include "types.h"
+#include "simulation_defines.hpp"
+#include "simulation_classTypes.hpp"
+
+#include "math/Vector.hpp"
+#include "dimensions/DataSpace.hpp"
+#include "mappings/simulation/SubGrid.hpp"
+#include "math/Complex.hpp"
+
+#include "fields/background/templates/TWTS/RotateField.tpp"
+#include "fields/background/templates/TWTS/Get_tdelay_SI.tpp"
+#include "fields/background/templates/TWTS/getFieldPositions_SI.tpp"
+#include "fields/background/templates/TWTS/TWTSFieldE.hpp"
+
 namespace picongpu
 {
-/** Load external TWTS field
- *
- */
+/** Load pre-defined background field */
 namespace templates
 {
 namespace pmMath = PMacc::algorithms::math;
@@ -49,9 +63,9 @@ namespace pmMath = PMacc::algorithms::math;
          * on host (see fieldBackground.param), this is no problem. */
         const SubGrid<simDim>& subGrid = Environment<simDim>::get().SubGrid();
         halfSimSize = subGrid.getGlobalDomain().size / 2;
-        tdelay = detail::Get_tdelay_SI<simDim>()(auto_tdelay, tdelay_user_SI, 
-                                                 halfSimSize, pulselength_SI,
-                                                 focus_y_SI, phi, beta_0);
+        tdelay = detail::get_tdelay_SI(auto_tdelay, tdelay_user_SI, 
+                                       halfSimSize, pulselength_SI,
+                                       focus_y_SI, phi, beta_0);
     }
     
     template<>
