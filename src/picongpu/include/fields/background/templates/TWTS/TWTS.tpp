@@ -32,6 +32,6 @@
 
 #include "fields/background/templates/TWTS/RotateField.tpp"
 #include "fields/background/templates/TWTS/Get_tdelay_SI.tpp"
-#include "fields/background/templates/TWTS/GetFieldPositions_SI.tpp"
+#include "fields/background/templates/TWTS/getFieldPositions_SI.tpp"
 #include "fields/background/templates/TWTS/TWTSFieldE.tpp"
 #include "fields/background/templates/TWTS/TWTSFieldB.tpp"
