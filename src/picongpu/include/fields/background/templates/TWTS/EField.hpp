@@ -91,14 +91,14 @@ public:
      */
     HINLINE
     EField( const float_64 focus_y_SI,
-                const float_64 wavelength_SI,
-                const float_64 pulselength_SI,
-                const float_64 w_x_SI,
-                const float_64 w_y_SI,
-                const float_X phi               = 90.*(PI / 180.),
-                const float_X beta_0            = 1.0,
-                const float_64 tdelay_user_SI   = 0.0,
-                const bool auto_tdelay          = true );
+            const float_64 wavelength_SI,
+            const float_64 pulselength_SI,
+            const float_64 w_x_SI,
+            const float_64 w_y_SI,
+            const float_X phi               = 90.*(PI / 180.),
+            const float_X beta_0            = 1.0,
+            const float_64 tdelay_user_SI   = 0.0,
+            const bool auto_tdelay          = true );
 
     /** Specify your background field E(r,t) here
      *
@@ -110,7 +110,7 @@ public:
     operator()( const DataSpace<simDim>& cellIdx,
                 const uint32_t currentStep ) const;
 
-    /** Calculate the Ex(r,t) field here
+    /** Calculate the Ex(r,t) field here (electric field vector normal to pulse-front-tilt plane)
      *
      * \param pos Spatial position of the target field
      * \param time Absolute time (SI, including all offsets and transformations)
@@ -118,6 +118,15 @@ public:
      * \return Ex-field component of the non-rotated TWTS field in SI units */
     HDINLINE float_T
     calcTWTSEx( const float3_64& pos, const float_64 time ) const;
+    
+    /** Calculate the Ey(r,t) field here (electric field vector in pulse-front-tilt plane)
+     *
+     * \param pos Spatial position of the target field
+     * \param time Absolute time (SI, including all offsets and transformations)
+     *  for calculating the field
+     * \return Ex-field component of the non-rotated TWTS field in SI units */
+    HDINLINE float_T
+    calcTWTSEy( const float3_64& pos, const float_64 time ) const;
     
     /** Calculate the E-field vector of the TWTS laser in SI units.
      * \tparam T_dim Specializes for the simulation dimension
