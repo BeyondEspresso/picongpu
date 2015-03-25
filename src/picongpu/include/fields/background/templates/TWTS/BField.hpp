@@ -41,6 +41,14 @@ class BField
 public:
     typedef float_X float_T;
     
+    enum PolarizationType
+    {
+        /* The linear polarization of the TWTS laser is defined
+         * relative to the plane of the pulse front tilt. */
+        NORMAL_TO_TILTPLANE = 1u, /* use Ex-fields in TWTS laser internal coordinate system */
+        WITHIN_TILTPLANE = 2u,    /* use Ey-fields in TWTS laser internal coordinate system */
+    };
+    
     /* Center of simulation volume in number of cells */
     PMACC_ALIGN(halfSimSize,DataSpace<simDim>);
     /* y-position of TWTS coordinate origin inside the simulation coordinates [meter]
@@ -71,7 +79,28 @@ public:
     /* Should the TWTS laser time delay be chosen automatically, such that
     the laser gradually enters the simulation volume? [Default: TRUE] */
     const PMACC_ALIGN(auto_tdelay,bool);
-    
+    /* Polarization of TWTS laser */
+    const PMACC_ALIGN(pol,PolarizationType);
+        
+    /** Magnetic field of the TWTS laser
+     *
+     * \param focus_y_SI the distance to the laser focus in y-direction [m]
+     * \param wavelength_SI central wavelength [m]
+     * \param pulselength_SI sigma of std. gauss for intensity (E^2), 
+     *  pulselength_SI = FWHM_of_Intensity / 2.35482 [seconds (sigma)]
+     * \param w_x beam waist: distance from the axis where the pulse electric field
+     *  decreases to its 1/e^2-th part at the focus position of the laser [m]
+     * \param w_y \see w_x
+     * \param phi interaction angle between TWTS laser propagation vector and
+     *  the y-axis [rad, default = 90.*(PI/180.)]
+     * \param beta_0 propagation speed of overlap normalized to
+     *  the speed of light [c, default = 1.0]
+     * \param tdelay_user manual time delay if auto_tdelay is false
+     * \param auto_tdelay calculate the time delay such that the TWTS pulse is not
+     *  inside the simulation volume at simulation start timestep = 0 [default = true]
+     * \param pol dtermines the TWTS laser polarization, which is either normal or parallel
+     *  to the laser pulse front tilt plane [ default= NORMAL_TO_TILTPLANE , WITHIN_TILTPLANE ]
+     */
     HINLINE
     BField( const float_64 focus_y_SI,
             const float_64 wavelength_SI,
@@ -81,7 +110,8 @@ public:
             const float_X phi               = 90.*(PI / 180.),
             const float_X beta_0            = 1.0,
             const float_64 tdelay_user_SI   = 0.0,
-            const bool auto_tdelay          = true );
+            const bool auto_tdelay          = true
+            const PolarizationType pol      = NORMAL_TO_TILTPLANE );
     
     
     /** Specify your background field B(r,t) here
