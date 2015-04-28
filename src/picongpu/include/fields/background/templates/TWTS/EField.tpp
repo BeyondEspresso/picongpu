@@ -54,7 +54,7 @@ namespace twts
                     const float_X phi,
                     const float_X beta_0,
                     const float_64 tdelay_user_SI,
-                    const bool auto_tdelay
+                    const bool auto_tdelay,
                     const PolarizationType pol ) :
         focus_y_SI(focus_y_SI), wavelength_SI(wavelength_SI),
         pulselength_SI(pulselength_SI), w_x_SI(w_x_SI),
@@ -180,6 +180,7 @@ namespace twts
     EField::calcTWTSEx( const float3_64& pos, const float_64 time) const
     {
         typedef PMacc::math::Complex<float_T> complex_T;
+        typedef PMacc::math::Complex<float_64> complex_64;
         /** Unit of Speed */
         const double UNIT_SPEED = SI::SPEED_OF_LIGHT_SI;
         /** Unit of time */
@@ -206,17 +207,17 @@ namespace twts
          * documentation purposes. */
         /* const float_T eta = (PI / 2) - (phiReal - alphaTilt); */
         
-        const float_T cspeed = float_T(1.0);
+        const float_T cspeed = float_T( SI::SPEED_OF_LIGHT_SI / UNIT_SPEED );
         const float_T lambda0 = float_T(wavelength_SI / UNIT_LENGTH);
-        const float_T om0 = float_T(2.0*PI*cspeed / lambda0*UNIT_TIME);
+        const float_T om0 = float_T(2.0*PI*cspeed / lambda0);
         /* factor 2  in tauG arises from definition convention in laser formula */
         const float_T tauG = float_T(pulselength_SI*2.0 / UNIT_TIME);
         /* w0 is wx here --> w0 could be replaced by wx */
         const float_T w0 = float_T(w_x_SI / UNIT_LENGTH);
-        const float_T rho0 = float_T(PI*w0*w0/lambda0/UNIT_LENGTH);
+        const float_T rho0 = float_T(PI*w0*w0/lambda0);
         /* wy is width of TWTS pulse */
         const float_T wy = float_T(w_y_SI / UNIT_LENGTH);
-        const float_T k = float_T(2.0*PI / lambda0*UNIT_LENGTH);
+        const float_T k = float_T(2.0*PI / lambda0);
         const float_T x = float_T(pos.x() / UNIT_LENGTH);
         const float_T y = float_T(pos.y() / UNIT_LENGTH);
         const float_T z = float_T(pos.z() / UNIT_LENGTH);
@@ -289,7 +290,9 @@ namespace twts
                     + om0*wy*wy*(y*y - float_T(4.0)*(cspeed*t - z)*z)
                 )
             )
-        ) / (float_T(2.0)*cspeed*wy*wy*helpVar1*helpVar2);
+        /* The "round-trip" conversion in the line below fixes a gross accuracy bug
+         * in floating-point arithmetics, when float_T is set to float_X. */
+        ) * complex_T( float_64(1.0) / complex_64(float_T(2.0)*cspeed*wy*wy*helpVar1*helpVar2) );
 
         const complex_T helpVar5 = cspeed*om0*tauG*tauG 
             - complex_T(0,8)*y*pmMath::tan( float_T(PI / 2)-phiT )
