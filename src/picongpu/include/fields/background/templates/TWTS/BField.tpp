@@ -60,7 +60,7 @@ namespace twts
         pulselength_SI(pulselength_SI), w_x_SI(w_x_SI),
         w_y_SI(w_y_SI), phi(phi), beta_0(beta_0),
         tdelay_user_SI(tdelay_user_SI), dt(SI::DELTA_T_SI),
-        unit_length(UNIT_LENGTH), auto_tdelay(auto_tdelay), pol(pol)
+        unit_length(UNIT_LENGTH), auto_tdelay(auto_tdelay), pol(pol), phiPositive( float_X(1.0) )
     {
         /* Note: Enviroment-objects cannot be instantiated on CUDA GPU device. Since this is done
          * on host (see fieldBackground.param), this is no problem. */
@@ -69,6 +69,7 @@ namespace twts
         tdelay = detail::getInitialTimeDelay_SI(auto_tdelay, tdelay_user_SI, 
                                                 halfSimSize, pulselength_SI,
                                                 focus_y_SI, phi, beta_0);
+        if ( phi < float_X(0.0) ) phiPositive = float_X(-1.0);
     }
     
     template<>
@@ -265,7 +266,11 @@ namespace twts
         
         /* propagation speed of overlap normalized to the speed of light [Default: beta0=1.0] */
         const float_T beta0 = float_T(beta_0);
-        const float_T phiReal = float_T(phi);
+        /* If phi < 0 the formulas below are not directly applicable.
+         * Instead phi is taken positive, but the entire pulse rotated by 180 deg around the
+         * z-axis of the coordinate system in this function.
+         */
+        const float_T phiReal = float_T( pmMath::abs(phi) );
         const float_T alphaTilt = pmMath::atan2(float_T(1.0)-beta0*pmMath::cos(phiReal),
                                                 beta0*pmMath::sin(phiReal));
         const float_T phiT = float_T(2.0)*alphaTilt;
@@ -293,8 +298,8 @@ namespace twts
         /* wy is width of TWTS pulse */
         const float_T wy = float_T(w_y_SI / UNIT_LENGTH);
         const float_T k = float_T(2.0*PI / lambda0);
-        const float_T x = float_T(pos.x() / UNIT_LENGTH);
-        const float_T y = float_T(pos.y() / UNIT_LENGTH);
+        const float_T x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
+        const float_T y = float_T(phiPositive * pos.y() / UNIT_LENGTH);
         const float_T z = float_T(pos.z() / UNIT_LENGTH);
         const float_T t = float_T(time / UNIT_TIME);
                         
@@ -408,7 +413,15 @@ namespace twts
         
         /* propagation speed of overlap normalized to the speed of light [Default: beta0=1.0] */
         const float_T beta0 = float_T(beta_0);
-        const float_T phiReal = float_T(phi);
+        /* If phi < 0 the formulas below are not directly applicable.
+         * Instead phi is taken positive, but the entire pulse rotated by 180 deg around the
+         * z-axis of the coordinate system in this function.
+         * Note a: Another consequence is that the resulting field vectors also need to be rotated.
+         * Note b: Instead of modifying field_x --> -field_x and field_y --> -field_y according
+         *         to "Note a", we choose to introduce an additional 180deg shift due symmetry
+         *         and modify only field_z --> -field_z .
+         */
+        const float_T phiReal = float_T( pmMath::abs(phi) );
         const float_T alphaTilt = pmMath::atan2(float_T(1.0)-beta0*pmMath::cos(phiReal),
                                                 beta0*pmMath::sin(phiReal));
         const float_T phiT = float_T(2.0)*alphaTilt;
@@ -436,8 +449,8 @@ namespace twts
         /* wy is width of TWTS pulse */
         const float_T wy = float_T(w_y_SI / UNIT_LENGTH);
         const float_T k = float_T(2.0*PI / lambda0);
-        const float_T x = float_T(pos.x() / UNIT_LENGTH);
-        const float_T y = float_T(pos.y() / UNIT_LENGTH);
+        const float_T x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
+        const float_T y = float_T(phiPositive * pos.y() / UNIT_LENGTH);
         const float_T z = float_T(pos.z() / UNIT_LENGTH);
         const float_T t = float_T(time / UNIT_TIME);
                         
@@ -483,7 +496,8 @@ namespace twts
         const complex_T helpVar7 = cspeed*om0*tauG*tauG
                                     - complex_T(0,1)*y*cosPhi / cosPhi2 / cosPhi2*tanPhi2
                                     - complex_T(0,2)*z*tanPhi2*tanPhi2;
-        const complex_T result = ( complex_T(0,2)*pmMath::exp(helpVar6)*tauG*tanPhi2
+        const complex_T result = float_T(phiPositive)
+                                    * ( complex_T(0,2)*pmMath::exp(helpVar6)*tauG*tanPhi2
                                     *(cspeed*t - z + y*tanPhi2)
                                     *pmMath::sqrt( (om0*rho0) / helpVar3 )
                                   ) / pmMath::pow(helpVar7,float_T(1.5));
@@ -523,7 +537,15 @@ namespace twts
         
         /* propagation speed of overlap normalized to the speed of light [Default: beta0=1.0] */
         const float_T beta0 = float_T(beta_0);
-        const float_T phiReal = float_T(phi);
+        /* If phi < 0 the formulas below are not directly applicable.
+         * Instead phi is taken positive, but the entire pulse rotated by 180 deg around the
+         * z-axis of the coordinate system in this function.
+         * Note a: Another consequence is that the resulting field vectors also need to be rotated.
+         * Note b: Instead of modifying field_x --> -field_x and field_y --> -field_y according
+         *         to "Note a", we choose to introduce an additional 180deg shift due symmetry
+         *         and modify only field_z --> -field_z .
+         */
+        const float_T phiReal = float_T( pmMath::abs(phi) );
         const float_T alphaTilt = pmMath::atan2(float_T(1.0)-beta0*pmMath::cos(phiReal),
                                                 beta0*pmMath::sin(phiReal));
         const float_T phiT = float_T(2.0)*alphaTilt;
@@ -551,8 +573,8 @@ namespace twts
         /* wy is width of TWTS pulse */
         const float_T wy = float_T(w_y_SI / UNIT_LENGTH);
         const float_T k = float_T(2.0*PI / lambda0);
-        const float_T x = float_T(pos.x() / UNIT_LENGTH);
-        const float_T y = float_T(pos.y() / UNIT_LENGTH);
+        const float_T x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
+        const float_T y = float_T(phiPositive * pos.y() / UNIT_LENGTH);
         const float_T z = float_T(pos.z() / UNIT_LENGTH);
         const float_T t = float_T(time / UNIT_TIME);
                         
@@ -635,7 +657,7 @@ namespace twts
             )
         ) / rho0;
         
-        const complex_T result = float_T(-1.0)*(
+        const complex_T result = float_T(phiPositive)*float_T(-1.0)*(
             cspeed*pmMath::exp(helpVar3)*k*tauG*x*pmMath::pow( helpVar2, float_T(-1.5) )
             / pmMath::sqrt(helpVar4)
         );
