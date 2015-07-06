@@ -496,8 +496,7 @@ namespace twts
         const complex_T helpVar7 = cspeed*om0*tauG*tauG
                                     - complex_T(0,1)*y*cosPhi / cosPhi2 / cosPhi2*tanPhi2
                                     - complex_T(0,2)*z*tanPhi2*tanPhi2;
-        const complex_T result = float_T(phiPositive)
-                                    * ( complex_T(0,2)*pmMath::exp(helpVar6)*tauG*tanPhi2
+        const complex_T result = ( complex_T(0,2)*pmMath::exp(helpVar6)*tauG*tanPhi2
                                     *(cspeed*t - z + y*tanPhi2)
                                     *pmMath::sqrt( (om0*rho0) / helpVar3 )
                                   ) / pmMath::pow(helpVar7,float_T(1.5));
@@ -657,7 +656,7 @@ namespace twts
             )
         ) / rho0;
         
-        const complex_T result = float_T(phiPositive)*float_T(-1.0)*(
+        const complex_T result = float_T(-1.0)*(
             cspeed*pmMath::exp(helpVar3)*k*tauG*x*pmMath::pow( helpVar2, float_T(-1.5) )
             / pmMath::sqrt(helpVar4)
         );
