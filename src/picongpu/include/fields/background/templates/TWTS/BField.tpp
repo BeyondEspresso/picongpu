@@ -234,7 +234,9 @@ namespace twts
         
         const PMacc::math::Vector<floatD_64,detail::numComponents> bFieldPositions_SI =
               detail::getFieldPositions_SI(cellIdx,halfSimSize,
-                fieldSolver::NumericalCellType::getBFieldPosition(),unit_length,focus_y_SI,phi);
+                fieldSolver::NumericalCellType::getBFieldPosition(),unit_length,focus_y_SI,
+                phi,( phiPositive > float_X(0.0) ) );
+
         /* Single TWTS-Pulse */
         switch (pol)
         {
@@ -298,8 +300,8 @@ namespace twts
         /* wy is width of TWTS pulse */
         const float_T wy = float_T(w_y_SI / UNIT_LENGTH);
         const float_T k = float_T(2.0*PI / lambda0);
-        const float_T x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
-        const float_T y = float_T(phiPositive * pos.y() / UNIT_LENGTH);
+        const float_T x = float_T(pos.x() / UNIT_LENGTH);
+        const float_T y = float_T(pos.y() / UNIT_LENGTH);
         const float_T z = float_T(pos.z() / UNIT_LENGTH);
         const float_T t = float_T(time / UNIT_TIME);
                         
@@ -449,8 +451,8 @@ namespace twts
         /* wy is width of TWTS pulse */
         const float_T wy = float_T(w_y_SI / UNIT_LENGTH);
         const float_T k = float_T(2.0*PI / lambda0);
-        const float_T x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
-        const float_T y = float_T(phiPositive * pos.y() / UNIT_LENGTH);
+        const float_T x = float_T(pos.x() / UNIT_LENGTH);
+        const float_T y = float_T(pos.y() / UNIT_LENGTH);
         const float_T z = float_T(pos.z() / UNIT_LENGTH);
         const float_T t = float_T(time / UNIT_TIME);
                         
@@ -572,8 +574,8 @@ namespace twts
         /* wy is width of TWTS pulse */
         const float_T wy = float_T(w_y_SI / UNIT_LENGTH);
         const float_T k = float_T(2.0*PI / lambda0);
-        const float_T x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
-        const float_T y = float_T(phiPositive * pos.y() / UNIT_LENGTH);
+        const float_T x = float_T(pos.x() / UNIT_LENGTH);
+        const float_T y = float_T(pos.y() / UNIT_LENGTH);
         const float_T z = float_T(pos.z() / UNIT_LENGTH);
         const float_T t = float_T(time / UNIT_TIME);
                         
