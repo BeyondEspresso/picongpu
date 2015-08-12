@@ -202,7 +202,7 @@ public:
 	else
 	{
 	    currentStep--; //We dump before calculation, thus we must go one step back when doing a restart.
-	    movingWindowCheck(currentStep); //If we restart at any step check if we must slide.
+	    //movingWindowCheck(currentStep); //If we restart at any step check if we must slide.
 	}
 
         /* dump 0% output */
