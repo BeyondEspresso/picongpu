@@ -197,15 +197,13 @@ namespace twts
         /** Unit of length */
         const double UNIT_LENGTH = UNIT_TIME*UNIT_SPEED;
     
-        /* propagation speed of overlap normalized to the speed of light [Default: beta0=1.0] */
-        const float_T beta0 = float_T(beta_0);
         /* If phi < 0 the formulas below are not directly applicable.
          * Instead phi is taken positive, but the entire pulse rotated by 180 deg around the
          * z-axis of the coordinate system in this function.
          */
         const float_T phiReal = float_T( pmMath::abs(phi) );
-        const float_T alphaTilt = pmMath::atan2(float_T(1.0)-beta0*pmMath::cos(phiReal),
-                                                beta0*pmMath::sin(phiReal));
+        const float_T alphaTilt = pmMath::atan2(float_T(1.0)-float_T(beta_0)*pmMath::cos(phiReal),
+                                                float_T(beta_0)*pmMath::sin(phiReal));
         const float_T phiT = float_T(2.0)*alphaTilt;
         /* Definition of the laser pulse front tilt angle for the laser field below.
          * For beta0 = 1.0, this is equivalent to our standard definition. Question: Why is the
@@ -231,10 +229,24 @@ namespace twts
         /* wy is width of TWTS pulse */
         const float_T wy = float_T(w_y_SI / UNIT_LENGTH);
         const float_T k = float_T(2.0*PI / lambda0);
+
+        /* In order to calculate in single-precision and in order to account for errors in
+         * the approximations far from the coordinate origin, we use the wavelength-periodicity and
+         * the known propagation direction for realizing the laser pulse using relative coordinates
+         * (i.e. from a finite coordinate range) only. All these quantities have to be calculated
+         * in double precision.
+         */
+        const float_64 timeDiv = float_64(2.0) * wavelength_SI / SI::SPEED_OF_LIGHT_SI
+            * pmMath::floor( time / ( float_64(2.0) * wavelength_SI / SI::SPEED_OF_LIGHT_SI ) );
+        const float_64 tanAlpha = ( float_64(1.0) - beta_0 * pmMath::cos(phi) )
+                                    / ( beta_0 * pmMath::sin(phi) );
+        const float_T timeMod = float_T( time - timeDiv );
+        const float_T yMod = float_T( pos.y() + ( timeDiv*SI::SPEED_OF_LIGHT_SI / tanAlpha ) );
+
         const float_T x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
-        const float_T y = float_T(phiPositive * pos.y() / UNIT_LENGTH);
+        const float_T y = float_T(phiPositive * yMod / UNIT_LENGTH);
         const float_T z = float_T(pos.z() / UNIT_LENGTH);
-        const float_T t = float_T(time / UNIT_TIME);
+        const float_T t = float_T(timeMod / UNIT_TIME);
 
         /* Calculating shortcuts for speeding up field calculation */
         const float_T sinPhi = pmMath::sin(phiT);
