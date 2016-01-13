@@ -59,6 +59,16 @@ struct Float2int_rd<double>
     }
 };
 
+template<>
+struct Fmod<double>
+{
+    typedef double result;
+
+    HDINLINE result operator( )(result x, result y)
+    {
+        return ::fmod( x , y );
+    }
+};
 
 } //namespace math
 } //namespace algorithms
