@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2014 Axel Huebl, Heiko Burau, Rene Widera, Felix Schmitt
+ * Copyright 2013-2016 Axel Huebl, Heiko Burau, Rene Widera, Felix Schmitt, Alexander Debus
  *
  * This file is part of PIConGPU.
  *
@@ -63,18 +63,20 @@ private:
         /* later used to calculate smoother offsets */
         double stepsInFutureAfterComma = stepsInFuture_tmp - (double) stepsInFuture;
 
-        /* round to nearest step so we get smaller sliding dfference
+        /* round to nearest step so we get smaller sliding difference
          * this is valid if we activate sliding window because y direction has
          * the same size for all gpus
          */
-        const uint32_t stepsPerGPU = (uint32_t) math::floor(
-                                                            (double) (subGrid.getLocalDomain().size.y() * cell_height) / light_way_per_step + 0.5);
-        const uint32_t firstSlideStep = stepsPerGPU * devices_y - stepsInFuture;
-        const uint32_t firstMoveStep = stepsPerGPU * (devices_y - 1) - stepsInFuture;
+        const double stepsPerGPU = (double) (subGrid.getLocalDomain().size.y() * cell_height) / light_way_per_step;
+        const uint32_t firstSlideStep = (uint32_t) math::floor(   stepsPerGPU * (double) devices_y 
+                                                                - (double) stepsInFuture + 0.5           );
+        const uint32_t firstMoveStep =  (uint32_t) math::floor(   stepsPerGPU * (double) (devices_y - 1)
+                                                                - (double) stepsInFuture + 0.5           );
 
         if (slidingWindowActive==true && firstMoveStep <= currentStep)
         {
-            const uint32_t stepsInLastGPU = (currentStep + stepsInFuture) % stepsPerGPU;
+            const uint32_t stepsInLastGPU = (uint32_t) math::floor( math::fmod( (double) currentStep + (double) stepsInFuture,
+                                                                    stepsPerGPU ) + 0.5 );
             /* moving window start */
             if (firstSlideStep <= currentStep && stepsInLastGPU == 0)
             {
