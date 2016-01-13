@@ -36,6 +36,8 @@ struct Floor;
 template<typename Type>
 struct Float2int_rd;
 
+template<typename Type>
+struct Fmod;
 
 template<typename T1>
 HDINLINE typename Floor< T1>::result floor(T1 value)
@@ -47,6 +49,12 @@ template<typename T1>
 HDINLINE typename Float2int_rd< T1>::result float2int_rd(T1 value)
 {
     return Float2int_rd< T1 > ()(value);
+}
+
+template<typename T1>
+HDINLINE typename Fmod< T1>::result fmod(T1 x,T1 y)
+{
+    return Fmod< T1 > ()(x,y);
 }
 
 } //namespace math
