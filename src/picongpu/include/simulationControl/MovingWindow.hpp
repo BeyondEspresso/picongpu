@@ -75,10 +75,10 @@ private:
 
         if (slidingWindowActive==true && firstMoveStep <= currentStep)
         {
-            const uint32_t stepsInLastGPU = (uint32_t) math::floor( math::fmod( (double) currentStep + (double) stepsInFuture,
-                                                                    stepsPerGPU ) + 0.5 );
+            const double stepsInLastGPU = math::fmod( (double) currentStep + (double) stepsInFuture,
+                                                               stepsPerGPU );
             /* moving window start */
-            if (firstSlideStep <= currentStep && stepsInLastGPU == 0)
+            if (firstSlideStep <= currentStep && stepsInLastGPU < ( 1.0 / stepsPerGPU ) )
             {
                 incrementSlideCounter(currentStep);
                 if (doSlide)
@@ -88,8 +88,8 @@ private:
             /* round to nearest cell to have smoother offset jumps */
             if (offsetFirstGPU)
             {
-                *offsetFirstGPU = math::floor(((double) stepsInLastGPU + stepsInFutureAfterComma) *
-                                              light_way_per_step / cell_height + 0.5);
+                *offsetFirstGPU = math::floor( (stepsInLastGPU + stepsInFutureAfterComma) *
+                                                light_way_per_step / cell_height + 0.5      );
             }
         }
     }
