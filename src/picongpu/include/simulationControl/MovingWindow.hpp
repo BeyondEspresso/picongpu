@@ -78,7 +78,7 @@ private:
             const double stepsInLastGPU = math::fmod( (double) currentStep + (double) stepsInFuture,
                                                                stepsPerGPU );
             /* moving window start */
-            if (firstSlideStep <= currentStep && stepsInLastGPU < ( 1.0 / stepsPerGPU ) )
+            if (firstSlideStep <= currentStep && stepsInLastGPU < 1.0 )
             {
                 incrementSlideCounter(currentStep);
                 if (doSlide)
