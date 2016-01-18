@@ -325,8 +325,8 @@ namespace twts
          * so that collisions with the front face of the simulation can be avoided
          * in a reliable, reproducible fashion. This is important for example for the Lehe solver.
          */
-        const float_T offset = pmMath::abs( z - (float_T) tanAlpha * y ) * pmMath::cos( phiT / float_T(2.0) );
-        const float_T offsetTolerance = float_T(5.0) * tauG * cspeed + lambda0;
+        const float_T offset = pmMath::abs( z - phiPositive * (float_T) tanAlpha * y ) * pmMath::cos( phiT / float_T(2.0) );
+        const float_T offsetTolerance = float_T(4.0) * tauG * cspeed + lambda0;
         if ( offset > offsetTolerance ) return float_T(0.0);
 
         /* Calculating shortcuts for speeding up field calculation */
@@ -487,8 +487,8 @@ namespace twts
          * so that collisions with the front face of the simulation can be avoided
          * in a reliable, reproducible fashion. This is important for example for the Lehe solver.
          */
-        const float_T offset = pmMath::abs( z - (float_T) tanAlpha * y ) * pmMath::cos( phiT / float_T(2.0) );
-        const float_T offsetTolerance = float_T(5.0) * tauG * cspeed + lambda0;
+        const float_T offset = pmMath::abs( z - phiPositive * (float_T) tanAlpha * y ) * pmMath::cos( phiT / float_T(2.0) );
+        const float_T offsetTolerance = float_T(4.0) * tauG * cspeed + lambda0;
         if ( offset > offsetTolerance ) return float_T(0.0);
 
         /* Calculating shortcuts for speeding up field calculation */
@@ -643,8 +643,8 @@ namespace twts
          * so that collisions with the front face of the simulation can be avoided
          * in a reliable, reproducible fashion. This is important for example for the Lehe solver.
          */
-        //const float_T offset = pmMath::abs( z - (float_T) tanAlpha * y ) * pmMath::cos( phiT / float_T(2.0) );
-        //const float_T offsetTolerance = float_T(5.0) * tauG * cspeed + lambda0;
+        //const float_T offset = pmMath::abs( z - phiPositive * (float_T) tanAlpha * y ) * pmMath::cos( phiT / float_T(2.0) );
+        //const float_T offsetTolerance = float_T(4.0) * tauG * cspeed + lambda0;
         //if ( offset > offsetTolerance ) return float_T(0.0);
                         
         /* Shortcuts for speeding up the field calculation. */
