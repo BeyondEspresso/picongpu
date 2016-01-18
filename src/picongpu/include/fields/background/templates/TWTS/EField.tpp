@@ -253,6 +253,15 @@ namespace twts
         const float_T z = float_T(zMod / UNIT_LENGTH);
         const float_T t = float_T(timeMod / UNIT_TIME);
 
+        /* Calculate distance from laser pulse front and set field to zero if the result
+         * is 5 times the pulse length away. This sets a clear border of the laser pulse,
+         * so that collisions with the front face of the simulation can be avoided
+         * in a reliable, reproducible fashion. This is important for example for the Lehe solver.
+         */
+        const float_T offset = pmMath::abs( z - (float_T) tanAlpha * y ) * pmMath::cos( phiT / float_T(2.0) );
+        const float_T offsetTolerance = float_T(5.0) * tauG * cspeed + lambda0;
+        if ( offset > offsetTolerance ) return float_T(0.0);
+
         /* Calculating shortcuts for speeding up field calculation */
         const float_T sinPhi = pmMath::sin(phiT);
         const float_T cosPhi = pmMath::cos(phiT);
