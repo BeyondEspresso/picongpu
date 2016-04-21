@@ -29,6 +29,7 @@
 #include "nvidia/rng/distributions/Uniform_float.hpp"
 #include "mpi/SeedPerRank.hpp"
 #include "traits/GetUniqueTypeId.hpp"
+#include "particles/traits/GetAtomicNumbers.hpp" 
 
 namespace picongpu
 {
@@ -100,17 +101,30 @@ struct RandomImpl
      */
     DINLINE MacroParticleCfg mapRealToMacroParticle(const float_X realParticlesPerCell)
     {
+	const float_X protonNumber  = GetAtomicNumbers<SpeciesType>::type::numberOfProtons;
+	//PMACC_CASSERT_MSG( Proton_Number, protonNumber==0.0 );
         uint32_t numParsPerCell = ParamClass::numParticlesPerCell;
         float_X macroWeighting = float_X(0.0);
         if (numParsPerCell > 0)
-            macroWeighting = realParticlesPerCell / float_X(numParsPerCell);
+            macroWeighting = realParticlesPerCell / float_X(numParsPerCell) * ( protonNumber - float_X(1.0) );
+	// Hack for reducing ionization of dopant species. Helium remains unaffected, while Nitrogen is culled to 1/6 of original population.
+	const float_X rngNum = rng();
+	if (rngNum > float_X(1.0)/(protonNumber-float_X(1.0)))
+        {
+	    numParsPerCell = 0;
+	    macroWeighting = float_X(0.0);
+        }
+	//if (threadIdx.x==0 && threadIdx.y==0 && threadIdx.z==0 && blockIdx.x==0 && blockIdx.y==0 && blockIdx.z==0 )
+	//    printf( "ProtonNumber: %4.2f, Minimum Probability: %4.2f, Actual Probability: %4.2f \n", protonNumber, float_X(1.0)/(protonNumber-float_X(1.0)), rngNum );
+        //threadIdx.x==0
+	//blockIdx.x==0
 
         while (macroWeighting < MIN_WEIGHTING &&
                numParsPerCell > 0)
         {
             --numParsPerCell;
             if (numParsPerCell > 0)
-                macroWeighting = realParticlesPerCell / float_X(numParsPerCell);
+                macroWeighting = realParticlesPerCell / float_X(numParsPerCell) * ( protonNumber - float_X(1.0) );
             else
                 macroWeighting = float_X(0.0);
         }
