@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2016 Axel Huebl, Anton Helm, Rene Widera, Richard Pausch
+ * Copyright 2013-2016 Axel Huebl, Anton Helm, Rene Widera, Richard Pausch, Alexander Debus
  *
  * This file is part of PIConGPU.
  *
@@ -41,6 +41,17 @@ namespace picongpu
     namespace laserGaussianBeam
     {
         //normed laser parameter
+        BOOST_CONSTEXPR_OR_CONST float_X WAVE_LENGTH = float_X (SI::WAVE_LENGTH_SI / UNIT_LENGTH); //unit: meter
+        BOOST_CONSTEXPR_OR_CONST float_X PULSE_LENGTH = float_X (SI::PULSE_LENGTH_SI / UNIT_TIME); //unit: seconds (1 sigma)
+        BOOST_CONSTEXPR_OR_CONST float_X AMPLITUDE = float_X (SI::AMPLITUDE_SI / UNIT_EFIELD); //unit: Volt /meter
+        BOOST_CONSTEXPR_OR_CONST float_X W0 = float_X(SI::W0_SI / UNIT_LENGTH); // unit: meter
+        BOOST_CONSTEXPR_OR_CONST float_X FOCUS_POS = float_X(SI::FOCUS_POS_SI / UNIT_LENGTH); //unit: meter
+        BOOST_CONSTEXPR_OR_CONST float_X INIT_TIME = float_X ((PULSE_INIT*SI::PULSE_LENGTH_SI) / UNIT_TIME); // unit: seconds (full inizialisation length)
+    }
+
+    namespace laserGaussLaguerreBeam
+    {
+        //normed laser parameter 
         BOOST_CONSTEXPR_OR_CONST float_X WAVE_LENGTH = float_X (SI::WAVE_LENGTH_SI / UNIT_LENGTH); //unit: meter
         BOOST_CONSTEXPR_OR_CONST float_X PULSE_LENGTH = float_X (SI::PULSE_LENGTH_SI / UNIT_TIME); //unit: seconds (1 sigma)
         BOOST_CONSTEXPR_OR_CONST float_X AMPLITUDE = float_X (SI::AMPLITUDE_SI / UNIT_EFIELD); //unit: Volt /meter
@@ -96,6 +107,7 @@ namespace picongpu
     /* include implemented laser profiles */
 #include "fields/laserProfiles/laserPulseFrontTilt.hpp"
 #include "fields/laserProfiles/laserGaussianBeam.hpp"
+#include "fields/laserProfiles/laserGaussLaguerreBeam.hpp"
 #include "fields/laserProfiles/laserWavepacket.hpp"
 #include "fields/laserProfiles/laserPlaneWave.hpp"
 #include "fields/laserProfiles/laserPolynom.hpp"
