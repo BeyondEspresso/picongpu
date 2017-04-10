@@ -1,0 +1,112 @@
+/**
+ * Copyright 2013-2014 Axel Huebl, Heiko Burau, Rene Widera, Felix Schmitt,
+ *                     Richard Pausch
+ *
+ * This file is part of PIConGPU.
+ *
+ * PIConGPU is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * PIConGPU is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with PIConGPU.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+
+#pragma once
+
+#include "particles/gasProfiles/profiles.def"
+
+namespace picongpu
+{
+namespace SI
+{
+/** The maximum density in particles per m^3 in the gas distribution
+ *  unit: ELEMENTS/m^3
+ *
+ * He (2e- / Atom ) with 1.e15 He / m^3
+ *                      = 2.e15 e- / m^3 */
+const double GAS_DENSITY_SI = 0.64e+25; /* 1.0cm dephasing length */
+
+}
+
+//##########################################################################
+//############## special gas profiles ######################################
+//##########################################################################
+
+namespace gasProfiles
+{
+
+struct FreeFormulaFunctor
+{
+
+    /**
+     * This formula should use SI quantities only!
+     * The profile will be multiplied by GAS_DENSITY.
+     *
+     * @param totalCellOffset total offset including all slides [in cells]
+     * @param unitLength PIConGPU unit length
+     *
+     * @return float_X density
+     */
+    HDINLINE float_X operator()(const DataSpace<simDim>& totalCellOffset, const float_64 unitLength)
+    {
+        const float_64 y = precisionCast<float_64>(totalCellOffset.y()) * SI::CELL_HEIGHT_SI;
+        const float_64 z = precisionCast<float_64>(totalCellOffset.z()) * SI::CELL_DEPTH_SI;
+
+        /** height of vacuum area on bottom border
+         *      this vacuum is really important because of the laser initialization, 
+         *      which is done in the first cell of the simulation
+         *  unit: meter */
+        const double VACUUM_Y_SI = 100.0 * picongpu::SI::CELL_HEIGHT_SI;
+        const double VACUUM_Z_SI = 148.0 * picongpu::SI::CELL_DEPTH_SI;
+        const double VACUUM_Z_LENGTH_SI = (2.0 * 32.0 + 2424.0) * picongpu::SI::CELL_DEPTH_SI;
+        const double Z_GRADIENT_SI = 32.0 * picongpu::SI::CELL_DEPTH_SI;
+        
+        float_X temp = float_X(1.0);
+        
+        if (y < VACUUM_Y_SI)
+            return float_X(0.0);
+        if (z < VACUUM_Z_SI || z >= (VACUUM_Z_LENGTH_SI + VACUUM_Z_SI))
+            temp = float_X(0.0);
+        if (z >= VACUUM_Z_SI && z < (VACUUM_Z_SI + Z_GRADIENT_SI))
+            temp = float_X( (z - VACUUM_Z_SI)/Z_GRADIENT_SI );
+        if (z < (VACUUM_Z_LENGTH_SI + VACUUM_Z_SI) && z >= (VACUUM_Z_LENGTH_SI + VACUUM_Z_SI - Z_GRADIENT_SI))
+            temp = float_X( (VACUUM_Z_LENGTH_SI + VACUUM_Z_SI - z)/Z_GRADIENT_SI );
+        
+//      if (y >= (VACUUM_Y_SI) && y < (VACUUM_Y_SI+20.0e-6))
+//          return temp*float_X( (y-VACUUM_Y_SI)/20.0e-6 );
+//      if (y > (VACUUM_Y_SI+60.0e-6) && y < (VACUUM_Y_SI+160.0e-6))
+//          return temp*float_X( ( 1.0 - (y-VACUUM_Y_SI-60.0e-6)/100.0e-6 ) * 0.5 + 0.5 );
+//      if (y >= (VACUUM_Y_SI+160.0e-6))
+//          return temp*float_X(0.5);
+
+        if (y >= (VACUUM_Y_SI) && y < (VACUUM_Y_SI+20.0e-6))
+            return temp*float_X( (y-VACUUM_Y_SI)/20.0e-6 );
+        if (y > (VACUUM_Y_SI+60.0e-6) && y < (VACUUM_Y_SI+160.0e-6))
+            return temp*float_X( ( 1.0 - (y-VACUUM_Y_SI-60.0e-6)/100.0e-6 ) * 0.292893 + 0.707107 );
+
+        if (y >= (VACUUM_Y_SI+160.0e-6) && y < (VACUUM_Y_SI+460.0e-6))
+            return temp*float_X( ( 1.0 - (y-VACUUM_Y_SI-160.0e-6)/300.0e-6 ) * 0.207107 + 0.50 );
+        if (y >= (VACUUM_Y_SI+460.0e-6))
+            return temp*float_X(0.50); // 0.32+e19 cm^-3
+
+        
+        return float_X(temp);
+    }
+};
+
+/* definition of gas sphere with flanks*/
+typedef FreeFormulaImpl<FreeFormulaFunctor> FreeFormula;
+
+}//namespace gasProfiles
+
+} //namepsace picongpu

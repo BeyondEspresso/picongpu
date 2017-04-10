@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Copyright 2013-2015 Axel Huebl, Richard Pausch
+# 
+# This file is part of PIConGPU. 
+# 
+# PIConGPU is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PIConGPU is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PIConGPU.
+# If not, see <http://www.gnu.org/licenses/>.
+#
+
+## calculations will be performed by tbg ##
+
+# send me a mail on BEGIN, END, FAIL, REQUEUE, ALL, 
+# TIME_LIMIT, TIME_LIMIT_90, TIME_LIMIT_80 and/or TIME_LIMIT_50
+
+# 4 gpus per node
+
+# number of cores to block per GPU - we got 6 cpus per gpu
+#   and we will be accounted 6 CPUs per GPU anyway
+
+# We only start 1 MPI task per GPU
+
+# use ceil to caculate nodes
+
+## end calculations ##
+
+# PIConGPU batch script for taurus' SLURM batch system
+
+#SBATCH --partition=gpu2
+#SBATCH --time=96:00:00
+# Sets batch job's name
+#SBATCH --job-name=TWEAC_08_01
+#SBATCH --nodes=24
+#SBATCH --ntasks=96
+#SBATCH --mincpus=4
+#SBATCH --cpus-per-task=6
+#SBATCH --mem-per-cpu=2583
+#SBATCH --gres=gpu:4
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=a.debus@hzdr.de
+#SBATCH --workdir=/scratch/p_electron/XTWTS/runs/TWEAC_08_01
+
+#SBATCH -o stdout
+#SBATCH -e stderr
+
+echo 'Running program...'
+
+cd /scratch/p_electron/XTWTS/runs/TWEAC_08_01
+
+export MODULES_NO_OUTPUT=1
+source ~/picongpu.profile
+unset MODULES_NO_OUTPUT
+
+#set user rights to u=rwx;g=r-x;o=---
+umask 0027
+
+mkdir simOutput 2> /dev/null
+cd simOutput
+
+# we are not sure if the current bullxmpi/1.2.4.3 catches pinned memory correctly
+#   support ticket [Ticket:2014052241001186] srun: mpi mca flags
+#   see bug https://github.com/ComputationalRadiationPhysics/picongpu/pull/438
+export OMPI_MCA_mpi_leave_pinned=0
+
+# Run CUDA memtest to check GPU's health
+srun -K1 /scratch/p_electron/XTWTS/runs/TWEAC_08_01/picongpu/bin/cuda_memtest.sh
+
+# Run PIConGPU
+if [ $? -eq 0 ] ; then
+  srun -K1 /scratch/p_electron/XTWTS/runs/TWEAC_08_01/picongpu/bin/picongpu -d 2 8 6                         -g 880 2304 2784                        -s 310000                           -m                    --png_e.period 500 --png_e.axis yx --png_e.slicePoint 0.5 --png_e.folder pngElectronsYX                                  --png_e.period 500 --png_e.axis yz --png_e.slicePoint 0.5 --png_e.folder pngElectronsYZ                                  --bin_e.period 100 --bin_e.maxEnergy 1500000 --bin_e.distanceToDetector 0.3 --bin_e.slitDetectorX 0.04 --bin_e.slitDetectorZ 0.04                                  --hdf5.period 3000                                   --ps_e.period 1000 --ps_e.space x --ps_e.momentum px --ps_e.min -10.0 --ps_e.max 10.0                                 --ps_e.period 1000 --ps_e.space x --ps_e.momentum pz --ps_e.min -10.0 --ps_e.max 10.0                                 --ps_e.period 1000 --ps_e.space y --ps_e.momentum px --ps_e.min -10.0 --ps_e.max 10.0                                 --ps_e.period 1000 --ps_e.space x --ps_e.momentum py --ps_e.min -10.0 --ps_e.max 3000.0                                 --ps_e.period 1000 --ps_e.space y --ps_e.momentum py --ps_e.min -10.0 --ps_e.max 3000.0                                 --ps_e.period 1000 --ps_e.space z --ps_e.momentum py --ps_e.min -10.0 --ps_e.max 3000.0                                 --ps_e.period 1000 --ps_e.space y --ps_e.momentum pz --ps_e.min -10.0 --ps_e.max 10.0                                 --elec_cnt.period 1000                             --countPerSuperCell_e.period 3000  --checkpoints 6000 --restart | tee output
+fi
+
+#this script was created with call /home/s0134766/src/picongpu/src/tools/bin/tbg -s sbatch -c submit/TWTS_0003.cfg -t submit/taurus-tud/k80_profile.tpl /scratch/p_electron/XTWTS/runs/TWEAC_08_01
