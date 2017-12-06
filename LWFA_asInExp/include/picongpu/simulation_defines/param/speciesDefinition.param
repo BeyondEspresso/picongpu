@@ -1,0 +1,135 @@
+/* Copyright 2013-2017 Rene Widera, Marco Garten, Richard Pausch,
+ *                     Benjamin Worpitz, Axel Huebl
+ *
+ * This file is part of PIConGPU.
+ *
+ * PIConGPU is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * PIConGPU is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with PIConGPU.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+
+#include "picongpu/simulation_defines.hpp"
+#include <pmacc/particles/Identifier.hpp>
+#include <pmacc/compileTime/conversion/MakeSeq.hpp>
+#include <pmacc/identifier/value_identifier.hpp>
+
+#include <pmacc/particles/traits/FilterByFlag.hpp>
+#include "picongpu/particles/Particles.hpp"
+#include <boost/mpl/string.hpp>
+
+
+namespace picongpu
+{
+
+/*########################### define particle attributes #####################*/
+
+/** describe attributes of a particle*/
+using DefaultParticleAttributes = MakeSeq_t<
+    position<position_pic>,
+    momentum,
+    weighting
+>;
+
+/* attribute sequence for species: ions */
+using AttributeSeqIons = MakeSeq_t<
+    DefaultParticleAttributes,
+    boundElectrons
+>;
+
+/*########################### end particle attributes ########################*/
+
+/*########################### define species #################################*/
+
+
+/*--------------------------- electrons --------------------------------------*/
+
+/* ratio relative to BASE_CHARGE and BASE_MASS */
+value_identifier( float_X, MassRatioElectrons, 1.0 );
+value_identifier( float_X, ChargeRatioElectrons, 1.0 );
+
+using ParticleFlagsElectrons = bmpl::vector<
+    particlePusher< UsedParticlePusher >,
+    shape< UsedParticleShape >,
+    interpolation< UsedField2Particle >,
+    current< UsedParticleCurrentSolver >,
+    massRatio< MassRatioElectrons >,
+    chargeRatio< ChargeRatioElectrons >
+>;
+
+/* define species: electrons */
+using PIC_Electrons = Particles<
+    bmpl::string< 'e' >,
+    ParticleFlagsElectrons,
+    DefaultParticleAttributes
+>;
+
+
+using PIC_Electrons_Nitrogen = Particles<
+    bmpl::string< 'e', 'n' >,
+    ParticleFlagsElectrons,
+    DefaultParticleAttributes
+>;
+
+
+
+/*--------------------------- ions -------------------------------------------*/
+
+
+/* ratio relative to BASE_CHARGE and BASE_MASS */
+value_identifier(float_X, MassRatioNitrogen, 25514.32503);
+value_identifier(float_X, ChargeRatioNitrogen, -7.0);
+
+/* ratio relateive to GAS_DENSITY for this species */
+value_identifier(float_X, DensityRatioNitrogen, 0.5 * 2.0 * 0.01 );
+/* ratio He/e_He (=0.5) * 2 (He_1 vs N_2 molecule) * doping (=2.5%) */
+
+
+
+using ParticleFlagsIons = bmpl::vector<
+    particlePusher< UsedParticlePusher >,
+    shape< UsedParticleShape >,
+    interpolation< UsedField2Particle >,
+    current< UsedParticleCurrentSolver >,
+    massRatio< MassRatioNitrogen >,
+    chargeRatio< ChargeRatioNitrogen >,
+    densityRatio<DensityRatioNitrogen>,
+    ionizers<
+        MakeSeq_t<
+            particles::ionization::BSIEffectiveZ< PIC_Electrons_Nitrogen >,
+            particles::ionization::ADKLinPol< PIC_Electrons_Nitrogen >
+        >
+    >,
+    ionizationEnergies< ionization::energies::AU::Nitrogen_t >,
+    effectiveNuclearCharge< ionization::effectiveNuclearCharge::Nitrogen_t >,
+    atomicNumbers< ionization::atomicNumbers::Nitrogen_t >
+>;
+
+/* define species: ions */
+using PIC_Nitrogen = Particles<
+    bmpl::string< 'n' >,
+    ParticleFlagsIons,
+    AttributeSeqIons
+>;
+
+/*########################### end species ####################################*/
+
+
+using VectorAllSpecies = MakeSeq_t<
+  PIC_Electrons,
+  PIC_Electrons_Nitrogen,
+  PIC_Nitrogen
+>;
+
+} //namespace picongpu

@@ -1,0 +1,4 @@
+/home/s0134766/picongpuProjects/LWFA_asInExp/bin/picongpu
+/home/s0134766/picongpuProjects/LWFA_asInExp/bin/cuda_memtest.sh
+/home/s0134766/picongpuProjects/LWFA_asInExp/bin/cuda_memtest
+/home/s0134766/picongpuProjects/LWFA_asInExp/bin/mpiInfo

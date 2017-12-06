@@ -1,0 +1,2 @@
+/sw/global/compilers/gcc/5.3.0/bin/ar qc libcupla.a  
+/sw/global/compilers/gcc/5.3.0/bin/ranlib libcupla.a

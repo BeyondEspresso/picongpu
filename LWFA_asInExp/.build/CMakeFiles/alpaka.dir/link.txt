@@ -1,0 +1,2 @@
+/sw/global/compilers/gcc/5.3.0/bin/ar qc libalpaka.a  CMakeFiles/alpaka.dir/home/s0134766/src/picongpu/thirdParty/alpaka/include/alpaka/core/Dummy.cpp.o
+/sw/global/compilers/gcc/5.3.0/bin/ranlib libalpaka.a

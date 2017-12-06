@@ -1,0 +1,51 @@
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /home/s0134766/picongpuProjects/LWFA_asInExp/.build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/gmake" "cmTC_0768e/fast"
+/usr/bin/gmake -f CMakeFiles/cmTC_0768e.dir/build.make CMakeFiles/cmTC_0768e.dir/build
+gmake[1]: Entering directory `/home/h6/s0134766/picongpuProjects/LWFA_asInExp/.build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_0768e.dir/CheckSymbolExists.c.o
+/sw/global/compilers/gcc/5.3.0/bin/gcc   -fPIC    -o CMakeFiles/cmTC_0768e.dir/CheckSymbolExists.c.o   -c /home/s0134766/picongpuProjects/LWFA_asInExp/.build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_0768e
+/sw/global/tools/cmake/3.9.0/bin/cmake -E cmake_link_script CMakeFiles/cmTC_0768e.dir/link.txt --verbose=1
+/sw/global/compilers/gcc/5.3.0/bin/gcc -fPIC     CMakeFiles/cmTC_0768e.dir/CheckSymbolExists.c.o  -o cmTC_0768e 
+CMakeFiles/cmTC_0768e.dir/CheckSymbolExists.c.o: In function `main':
+CheckSymbolExists.c:(.text+0x1b): undefined reference to `pthread_create'
+collect2: error: ld returned 1 exit status
+gmake[1]: *** [cmTC_0768e] Error 1
+gmake[1]: Leaving directory `/home/h6/s0134766/picongpuProjects/LWFA_asInExp/.build/CMakeFiles/CMakeTmp'
+gmake: *** [cmTC_0768e/fast] Error 2
+
+File /home/s0134766/picongpuProjects/LWFA_asInExp/.build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/s0134766/picongpuProjects/LWFA_asInExp/.build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/gmake" "cmTC_11fe0/fast"
+/usr/bin/gmake -f CMakeFiles/cmTC_11fe0.dir/build.make CMakeFiles/cmTC_11fe0.dir/build
+gmake[1]: Entering directory `/home/h6/s0134766/picongpuProjects/LWFA_asInExp/.build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_11fe0.dir/CheckFunctionExists.c.o
+/sw/global/compilers/gcc/5.3.0/bin/gcc   -fPIC -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_11fe0.dir/CheckFunctionExists.c.o   -c /sw/global/tools/cmake/3.9.0/share/cmake-3.9/Modules/CheckFunctionExists.c
+Linking C executable cmTC_11fe0
+/sw/global/tools/cmake/3.9.0/bin/cmake -E cmake_link_script CMakeFiles/cmTC_11fe0.dir/link.txt --verbose=1
+/sw/global/compilers/gcc/5.3.0/bin/gcc -fPIC -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_11fe0.dir/CheckFunctionExists.c.o  -o cmTC_11fe0 -lpthreads 
+/sw/global/compilers/gcc/5.3.0/lib/gcc/x86_64-unknown-linux-gnu/5.3.0/../../../../x86_64-unknown-linux-gnu/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+gmake[1]: *** [cmTC_11fe0] Error 1
+gmake[1]: Leaving directory `/home/h6/s0134766/picongpuProjects/LWFA_asInExp/.build/CMakeFiles/CMakeTmp'
+gmake: *** [cmTC_11fe0/fast] Error 2
+
+

@@ -1,0 +1,79 @@
+/* Copyright 2013-2017 Axel Huebl, Rene Widera, Felix Schmitt,
+ *                     Richard Pausch, Marco Garten
+ *
+ * This file is part of PIConGPU.
+ *
+ * PIConGPU is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * PIConGPU is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with PIConGPU.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+
+#include "picongpu/particles/densityProfiles/profiles.def"
+/* preprocessor struct generator */
+#include <pmacc/preprocessor/struct.hpp>
+
+
+namespace picongpu
+{
+namespace SI
+{
+    /** Base density in particles per m^3 in the density profiles.
+     *
+     * This is often taken as reference maximum density in normalized profiles.
+     * Individual particle species can define a `densityRatio` flag relative
+     * to this value.
+     *
+     * unit: ELEMENTS/m^3
+     */
+    //constexpr float_64 BASE_DENSITY_SI = 4.4e24 * 1.18953136836;
+    constexpr float_64 BASE_DENSITY_SI = 0.156e+25 * 2;
+ }
+
+namespace densityProfiles
+{
+
+  struct FreeFormulaFunctorElectronBackground
+  {
+
+    /**
+     * This formula uses SI quantities only
+     * The profile will be multiplied by GAS_DENSITY.
+     *
+     * @param position_SI total offset including all slides [in meter]
+     * @param cellSize_SI cell sizes [in meter]
+     *
+     * @return float_X density [normalized to 1.0]
+     */
+    HDINLINE float_X operator()(const floatD_64& position_SI, const floatD_64& cellSize_SI)
+    {
+      const float_64 gasJetCenter = 1.6e-3;
+      const float_64 y = (float_64(position_SI.y()) - gasJetCenter) * float_64( 1000.0 );
+      //const unsigned int y_cell_id = position_SI.y() / cellSize_SI[1];
+      BOOST_CONSTEXPR_OR_CONST float_64 VACUUM_Y_SI = 50.0 * SI::CELL_HEIGHT_SI;
+
+      if ( y>=((VACUUM_Y_SI - gasJetCenter)*float_64(1000.0)) )
+	return float_64( float_64(-0.17683)*math::exp(float_64(-6.0765)*math::pow( y*y ,float_64(1.7826)))
+			 + math::exp(float_64(-0.46823)*math::pow( y*y , float_64(2.6564) )) );
+
+      return float_64( 0.0 );
+        
+    }
+  };
+
+  /* definition of gas free formula */
+  typedef FreeFormulaImpl<FreeFormulaFunctorElectronBackground> FreeFormulaElectrons;
+
+}
+}
