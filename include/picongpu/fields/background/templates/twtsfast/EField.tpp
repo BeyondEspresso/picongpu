@@ -334,8 +334,8 @@ namespace picongpu
                 auto const zMod = float_T(pos.z() + numberOfPeriods * deltaZ);
 
                 auto const x = - float_T(phiPositive * pos.x() / UNIT_LENGTH);
-                auto const y = float_T(phiPositive * yMod / UNIT_LENGTH); //Hack: Forgot y-->-y in derivation (here: removed a "-"-sign)
-                auto const z = - float_T(zMod / UNIT_LENGTH); //Hack: Forgot z-->-z in derivation
+                auto const y = - float_T(phiPositive * yMod / UNIT_LENGTH);
+                auto const z = float_T(zMod / UNIT_LENGTH);
                 auto const t = float_T(timeMod / UNIT_TIME);
 
                 /* Calculating shortcuts for speeding up field calculation */
@@ -353,22 +353,22 @@ namespace picongpu
                  * thus help with formal code verification through manual code inspection.
                  */
                 const complex_T helpVar1 = float_T(2.0)*cspeed*t - complex_T(0,1)*cspeed*om0*tauG2 
-                                         + float_T(2.0)*z - float_T(2.0)*y*tanPhi2 + float_T(2.0)*(z + y*cotPhi)*tanPhi2_2;
+                                         - float_T(2.0)*z + float_T(2.0)*y*tanPhi2 - float_T(2.0)*(z + y*cotPhi)*tanPhi2_2;
                 const complex_T helpVar2 = (
-                            -(om0*om0*tauG2) - (complex_T(0,2)*k*x*x)/(complex_T(0,1)*rho0 + y*cosPhi + z*sinPhi)
-                            + (complex_T(0,4)*om0*y*tanPhi2)/cspeed
-                            - (complex_T(0,2)*om0*(z + y*cotPhi)*tanPhi2_2)/cspeed
-                            - (om0*helpVar1*helpVar1)/(cspeed*(cspeed*om0*tauG2 + complex_T(0,2)*(z + y*cotPhi)*tanPhi2_2))
+                            - (om0*om0*tauG2) - (complex_T(0,2)*k*x*x)/(complex_T(0,1)*rho0 - y*cosPhi - z*sinPhi)
+                            - (complex_T(0,4)*om0*y*tanPhi2)/cspeed
+                            + (complex_T(0,2)*om0*(z + y*cotPhi)*tanPhi2_2)/cspeed
+                            - (om0*helpVar1*helpVar1)/(cspeed*(cspeed*om0*tauG2 - complex_T(0,2)*(z + y*cotPhi)*tanPhi2_2))
                            )/float_T(4.0);
                 complex_T const result =
                     (
                         math::exp(helpVar2)*tauG
                         *math::sqrt
                         (
-                            rho0/(complex_T(0,1)*rho0 + y*cosPhi + z*sinPhi)
+                            rho0/(complex_T(0,1)*rho0 - y*cosPhi - z*sinPhi)
                         )
                     )/
-                    math::sqrt(tauG2 + (complex_T(0,2)*(z + y*cotPhi)*tanPhi2_2)/(cspeed*om0));
+                    math::sqrt(tauG2 - (complex_T(0,2)*(z + y*cotPhi)*tanPhi2_2)/(cspeed*om0));
                 return result.real();
             }
 

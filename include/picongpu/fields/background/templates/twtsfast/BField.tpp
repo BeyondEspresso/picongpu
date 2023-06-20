@@ -451,8 +451,8 @@ namespace picongpu
                 auto const zMod = float_T(pos.z() + numberOfPeriods * deltaZ);
 
                 auto const x = - float_T(phiPositive * pos.x() / UNIT_LENGTH);
-                auto const y = float_T(phiPositive * yMod / UNIT_LENGTH); // Hack: Forgot transform in derivation, y --> -y and z --> -z
-                auto const z = - float_T(zMod / UNIT_LENGTH);// Hack: Forgot transform in derivation, y -->-y and z --> -z
+                auto const y = - float_T(phiPositive * yMod / UNIT_LENGTH);
+                auto const z = float_T(zMod / UNIT_LENGTH);
                 auto const t = float_T(timeMod / UNIT_TIME);
 
                 /* Calculating shortcuts for speeding up field calculation */
@@ -476,45 +476,48 @@ namespace picongpu
                 /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
                  * thus help with formal code verification through manual code inspection.
                  */
-                const complex_T helpVar1 =    float_T(2.0)*cspeed*t - complex_T(0,1)*cspeed*om0*tauG2 + float_T(2.0)*z
-                                            - float_T(2.0)*y*tanPhi2 + float_T(2.0)*(z + y*cotPhi)*tanPhi2_2;
+                const complex_T helpVar1 =    float_T(2.0)*cspeed*t - complex_T(0,1)*cspeed*om0*tauG2 - float_T(2.0)*z
+                                            + float_T(2.0)*y*tanPhi2 - float_T(2.0)*(z + y*cotPhi)*tanPhi2_2;
                 const complex_T helpVar2 = (
-                    -(om0*om0*tauG2) - (complex_T(0,2)*k*x2)/(complex_T(0,1)*rho0 + y*cosPhi + z*sinPhi)
-                    + (complex_T(0,4)*om0*y*tanPhi2)/cspeed
-                    - (complex_T(0,2)*om0*(z + y*cotPhi)*tanPhi2_2)/cspeed
-                    - (om0*helpVar1*helpVar1)/(cspeed*(cspeed*om0*tauG2 + complex_T(0,2)*(z + y*cotPhi)*tanPhi2_2))
+                    - (om0*om0*tauG2) - (complex_T(0,2)*k*x2)/(complex_T(0,1)*rho0 - y*cosPhi - z*sinPhi)
+                    - (complex_T(0,4)*om0*y*tanPhi2)/cspeed
+                    + (complex_T(0,2)*om0*(z + y*cotPhi)*tanPhi2_2)/cspeed
+                    - (om0*helpVar1*helpVar1)/(cspeed*(cspeed*om0*tauG2 - complex_T(0,2)*(z + y*cotPhi)*tanPhi2_2))
                                            )/float_T(4.0);
-                const complex_T helpVar3 = rho0 - complex_T(0,1)*y*cosPhi - complex_T(0,1)*z*sinPhi;
+                const complex_T helpVar3 = rho0 + complex_T(0,1)*y*cosPhi + complex_T(0,1)*z*sinPhi;
 
                 const complex_T result = (math::exp(helpVar2)*tauG*rho0
                   *(
-                  complex_T(0,-4)*cspeed*om0*t*rho0*rho0 - float_T(2.0)*cspeed*om0*om0*tauG2*rho0*rho0 - complex_T(0,4)*om0*z*rho0*rho0
-                  - float_T(8.0)*z2*(cspeed - complex_T(0,2)*om0*z)*sinPhi2_2*sinPhi2_2 + cspeed*cspeed*k*om0*tauG2*x2*sinPhi
-                  - cspeed*cspeed*om0*tauG2*rho0*sinPhi - float_T(8.0)*cspeed*om0*t*z*rho0*sinPhi + complex_T(0,4)*cspeed*om0*om0*tauG2*z*rho0*sinPhi
-                  - float_T(8.0)*om0*z2*rho0*sinPhi + complex_T(0,1)*cspeed*cspeed*om0*tauG2*z*sinPhi_2 + complex_T(0,4)*cspeed*om0*t*z2*sinPhi_2
-                  + float_T(2.0)*cspeed*om0*om0*tauG2*z2*sinPhi_2 + complex_T(0,4)*om0*z2*z*sinPhi_2 + complex_T(0,4)*om0*y*rho0*rho0*tanPhi2
-                  + float_T(8.0)*om0*y*z*rho0*sinPhi*tanPhi2 - complex_T(0,4)*om0*y*z2*sinPhi_2*tanPhi2 - complex_T(0,4)*om0*z*rho0*rho0*tanPhi2_2
-                  - complex_T(0,4)*om0*y*rho0*rho0*cotPhi*tanPhi2_2 + complex_T(0,2)*cspeed*k*x2*z*sinPhi*tanPhi2_2
-                  - complex_T(0,2)*cspeed*z*rho0*sinPhi*tanPhi2_2 - float_T(8.0)*om0*z2*rho0*sinPhi*tanPhi2_2
-                  + float_T(2.0)*y2*cosPhi*cosPhi*(om0*(complex_T(0,2)*cspeed*t + cspeed*om0*tauG2 + complex_T(0,2)*z) - complex_T(0,2)*om0*y*tanPhi2 + 
-                  (-cspeed + complex_T(0,6)*om0*z + complex_T(0,2)*om0*y*cotPhi)*tanPhi2_2)
-                  + complex_T(0,1)*y*cosPhi
+                  complex_T(0,-4)*cspeed*om0*t*rho0*rho0 - float_T(2.0)*cspeed*om0*om0*tauG2*rho0*rho0 + complex_T(0,4)*om0*z*rho0*rho0
+                  - float_T(8.0)*z2*(cspeed + complex_T(0,2)*om0*z)*sinPhi2_2*sinPhi2_2 + cspeed*cspeed*k*om0*tauG2*x2*sinPhi
+                  - cspeed*cspeed*om0*tauG2*rho0*sinPhi + float_T(8.0)*cspeed*om0*t*z*rho0*sinPhi - complex_T(0,4)*cspeed*om0*om0*tauG2*z*rho0*sinPhi
+                  - float_T(8.0)*om0*z2*rho0*sinPhi - complex_T(0,1)*cspeed*cspeed*om0*tauG2*z*sinPhi_2 + complex_T(0,4)*cspeed*om0*t*z2*sinPhi_2
+                  + float_T(2.0)*cspeed*om0*om0*tauG2*z2*sinPhi_2 - complex_T(0,4)*om0*z2*z*sinPhi_2 - complex_T(0,4)*om0*y*rho0*rho0*tanPhi2
+                  + float_T(8.0)*om0*y*z*rho0*sinPhi*tanPhi2 + complex_T(0,4)*om0*y*z2*sinPhi_2*tanPhi2 + complex_T(0,4)*om0*z*rho0*rho0*tanPhi2_2
+                  + complex_T(0,4)*om0*y*rho0*rho0*cotPhi*tanPhi2_2 - complex_T(0,2)*cspeed*k*x2*z*sinPhi*tanPhi2_2
+                  + complex_T(0,2)*cspeed*z*rho0*sinPhi*tanPhi2_2 - float_T(8.0)*om0*z2*rho0*sinPhi*tanPhi2_2
+                  + float_T(2.0)*y2*cosPhi*cosPhi
                   *(
-                      float_T(4.0)*om0*(complex_T(0,2)*cspeed*t + cspeed*om0*tauG2 + complex_T(0,2)*z)*rho0 - complex_T(0,8)*om0*y*rho0*tanPhi2
-                    + float_T(2.0)*(cspeed*k*x2 - cspeed*rho0 + complex_T(0,8)*om0*z*rho0 + complex_T(0,4)*om0*y*rho0*cotPhi)*tanPhi2_2
+                      om0*(complex_T(0,2)*cspeed*t + cspeed*om0*tauG2 - complex_T(0,2)*z) + complex_T(0,2)*om0*y*tanPhi2
+                    - (cspeed + complex_T(0,6)*om0*z + complex_T(0,2)*om0*y*cotPhi)*tanPhi2_2
+                   )
+                  - complex_T(0,1)*y*cosPhi
+                  *(
+                      float_T(4.0)*om0*(complex_T(0,2)*cspeed*t + cspeed*om0*tauG2 - complex_T(0,2)*z)*rho0 + complex_T(0,8)*om0*y*rho0*tanPhi2
+                    + float_T(2.0)*(cspeed*k*x2 - cspeed*rho0 - complex_T(0,8)*om0*z*rho0 - complex_T(0,4)*om0*y*rho0*cotPhi)*tanPhi2_2
                     + sinPhi
                     *(
-                        om0*(cspeed*cspeed*tauG2 + float_T(8.0)*cspeed*t*z - complex_T(0,4)*cspeed*om0*tauG2*z + float_T(8.0)*z2)
-                      - float_T(8.0)*om0*y*z*tanPhi2 + float_T(4.0)*z*(complex_T(0,1)*cspeed + 3*om0*z)*tanPhi2_2
+                        om0*(cspeed*cspeed*tauG2 - float_T(8.0)*cspeed*t*z + complex_T(0,4)*cspeed*om0*tauG2*z + float_T(8.0)*z2)
+                      - float_T(8.0)*om0*y*z*tanPhi2 - float_T(4.0)*z*(complex_T(0,1)*cspeed - 3*om0*z)*tanPhi2_2
                      )
                     )
                    )
                   )/
                   (
                    float_T(2.0)*cspeed*om0*helpVar3*helpVar3*helpVar3
-                   *math::sqrt(rho0/(complex_T(0,1)*rho0 + y*cosPhi + z*sinPhi))
-                   *(complex_T(0,-1)*cspeed*om0*tauG2 + float_T(2.0)*(z + y*cotPhi)*tanPhi2_2)
-                   *math::sqrt(tauG2 + (complex_T(0,2)*(z + y*cotPhi)*tanPhi2_2)/(cspeed*om0))
+                   *math::sqrt(rho0/(complex_T(0,1)*rho0 - y*cosPhi - z*sinPhi))
+                   *(complex_T(0,-1)*cspeed*om0*tauG2 - float_T(2.0)*(z + y*cotPhi)*tanPhi2_2)
+                   *math::sqrt(tauG2 - (complex_T(0,2)*(z + y*cotPhi)*tanPhi2_2)/(cspeed*om0))
                   );
 
                 return result.real() / UNIT_SPEED;
