@@ -520,7 +520,11 @@ namespace picongpu
                    *math::sqrt(tauG2 - (complex_T(0,2)*(z + y*cotPhi)*tanPhi2_2)/(cspeed*om0))
                   );
 
-                return result.real() / UNIT_SPEED;
+                /* A 180°-rotation of the field vector around the z-axis
+                 * leads to a sign flip in the x- and y- components, respectively.
+                 * This is implemented by multiplying the result by "phiPositive".
+                 */
+                return phiPositive * result.real() / UNIT_SPEED;
             }
 
             /** Calculate the Bz(r,t) field
