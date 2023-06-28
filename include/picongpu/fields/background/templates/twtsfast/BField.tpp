@@ -595,8 +595,8 @@ namespace picongpu
                 auto const yMod = float_T(pos.y() + numberOfPeriods * deltaY);
                 auto const zMod = float_T(pos.z() + numberOfPeriods * deltaZ);
 
-                auto const x = - float_T(phiPositive * pos.x() / UNIT_LENGTH);
-                auto const y = - float_T(phiPositive * yMod / UNIT_LENGTH);
+                auto const x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
+                auto const y = float_T(phiPositive * yMod / UNIT_LENGTH);
                 auto const z = float_T(zMod / UNIT_LENGTH);
                 auto const t = float_T(timeMod / UNIT_TIME);
 
@@ -604,22 +604,12 @@ namespace picongpu
                 float_T sinPhi;
                 float_T cosPhi;
                 pmacc::math::sincos(phiT, sinPhi, cosPhi);
-                float_T const cscPhi = float_T(1.0) / sinPhi;
-                float_T const secPhi2 = float_T(1.0) / math::cos(phiT / float_T(2.0));
-                float_T const sinPhi2 = math::sin(phiT / float_T(2.0));
+                float_T const cotPhi = float_T(1.0) / math::tan(phiT );
                 float_T const tanPhi2 = math::tan(phiT / float_T(2.0));
-
-                float_T const cscPhi_3 = cscPhi * cscPhi * cscPhi;
-
-                float_T const sinPhi2_2 = sinPhi2 * sinPhi2;
-                float_T const sinPhi2_4 = sinPhi2_2 * sinPhi2_2;
                 float_T const tanPhi2_2 = tanPhi2 * tanPhi2;
-                float_T const secPhi2_2 = secPhi2 * secPhi2;
-
-                float_T const tanPI2_phi = math::tan(float_T(PI / 2.0) - phiT);
 
                 float_T const tauG2 = tauG * tauG;
-                float_T const om02 = om0 * om0;
+                float_T const cspeed2 = cspeed * cspeed;
                 float_T const x2 = x * x;
                 float_T const y2 = y * y;
                 float_T const z2 = z * z;
@@ -627,9 +617,38 @@ namespace picongpu
                 /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
                  * thus help with formal code verification through manual code inspection.
                  */
-                const complex_T result = complex_T(0,1);
+                helpVar1 = float_T(2.0) * cspeed * t + complex_T(0,1) * cspeed * om0 * tauG2 + float_T(2.0) * z
+                         + float_T(2.0) * y * tanPhi2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2;
+                helpVar2 = float_T(0.24) * (
+                            - (om0 * om0 * tauG2) - (complex_T(0,2) * k * x2)/(complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi)
+                            - (complex_T(0,4) * om0 * y * tanPhi2) / cspeed
+                            + (complex_T(0,2) * om0 * (z + y * cotPhi) * tanPhi2_2) / cspeed
+                            + (om0 * helpVar1 * helpVar1) / (cspeed * (cspeed * om0 * tauG2 - complex_T(0,2) * (z + y*cotPhi) * tanPhi2_2))
+                           );
+                helpVar3 = rho0 + complex_T(0,1) * z * sinPhi;
+                helpVar4 = rho0 + complex_T(0,1) * y * cosPhi - complex_T(0,1) * z * sinPhi;
 
-                return 0.0 * result.real() / UNIT_SPEED;
+                const complex_T result = (math::exp(helpVar2) * tauG * rho0
+                          *(
+                          complex_T(0,-4) * om0 * helpVar3 * helpVar3 * tanPhi2 * (cspeed * t - z + y*tanPhi2)
+                          - y * cosPhi * cosPhi * (
+                               complex_T(0,-1) * cspeed2 * om0 * tauG2 - complex_T(0,4) * om0 * y * (cspeed * t - z) * tanPhi2
+                             + float_T(2.0) * (complex_T(0,-2) * om0 * y2 - float_T(2.0) * cspeed * z - cspeed * y * cotPhi) * tanPhi2_2
+                           )
+                          + cosPhi *(
+                              cspeed2 * om0 * tauG2 * (-(k * x2) + rho0) + float_T(8.0) * om0 * y * (cspeed * t - z) * rho0 * tanPhi2
+                            - complex_T(0,2) * (-cspeed * k * x2 * z + complex_T(0,4) * om0 * y2 * rho0 + cspeed * z * rho0 - cspeed * y * (k * x2 - rho0) * cotPhi) * tanPhi2_2
+                            + complex_T(0,1) * z * sinPhi * (cspeed2 * om0 * tauG2 + float_T(8.0) * om0 * y * (cspeed * t - z) * tanPhi2
+                            + (float_T(8.0) * om0 * y2 - complex_T(0,2) * cspeed * z) * tanPhi2_2)
+                           )
+                          )
+                         )/
+                        (
+                            float_T(2.0) * cspeed * om0 * helpVar4 * helpVar4 * helpVar4 * math::sqrt(rho0 / (complex_T(0,1) * rho0 - y * cosPhi - z *sinPhi))
+                            * (complex_T(0,-1) * cspeed * om0 * tauG2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2)
+                            * math::sqrt(tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2) / (cspeed * om0))
+                        );
+                return result.real() / UNIT_SPEED;
             }
 
             /** Calculate the Bx(r,t) field
@@ -714,8 +733,8 @@ namespace picongpu
                 auto const yMod = float_T(pos.y() + numberOfPeriods * deltaY);
                 auto const zMod = float_T(pos.z() + numberOfPeriods * deltaZ);
 
-                auto const x = - float_T(phiPositive * pos.x() / UNIT_LENGTH);
-                auto const y = - float_T(phiPositive * yMod / UNIT_LENGTH);
+                auto const x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
+                auto const y = float_T(phiPositive * yMod / UNIT_LENGTH);
                 auto const z = float_T(zMod / UNIT_LENGTH);
                 auto const t = float_T(timeMod / UNIT_TIME);
 
@@ -723,21 +742,11 @@ namespace picongpu
                 float_T sinPhi;
                 float_T cosPhi;
                 pmacc::math::sincos(phiT, sinPhi, cosPhi);
-                float_T const sin2Phi = math::sin(phiT * float_T(2.0));
-                float_T const sinPhi2 = math::sin(phiT / float_T(2.0));
+                float_T const cotPhi = float_T(1.0) / math::tan(phiT );
                 float_T const tanPhi2 = math::tan(phiT / float_T(2.0));
-
-                float_T const cscPhi = float_T(1.0) / sinPhi;
-                float_T const tanPI2_phi = math::tan(float_T(PI / 2.0) - phiT);
-
-                float_T const sinPhi_2 = sinPhi * sinPhi;
-                float_T const sinPhi_4 = sinPhi_2 * sinPhi_2;
-                float_T const sinPhi2_2 = sinPhi2 * sinPhi2;
-                float_T const sinPhi2_4 = sinPhi2_2 * sinPhi2_2;
                 float_T const tanPhi2_2 = tanPhi2 * tanPhi2;
 
                 float_T const tauG2 = tauG * tauG;
-
                 float_T const x2 = x * x;
                 float_T const y2 = y * y;
                 float_T const z2 = z * z;
@@ -745,9 +754,22 @@ namespace picongpu
                 /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
                  * thus help with formal code verification through manual code inspection.
                  */
-                const complex_T result = complex_T(0,1);
-
-                return 0.0 * result.real() / UNIT_SPEED;
+                helpVar1 = float_T(2.0) * cspeed * t - complex_T(0,1) * cspeed * om0 * tauG2
+                         - float_T(2.0) * z + float_T(2.0) * y * tanPhi2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2;
+                helpVar2 = float_T(0.25) * (
+                    -(om0 * om0 * tauG2) - (complex_T(0,2) * k * x2)/(complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi)
+                    - (complex_T(0,4) * om0 * y * tanPhi2) / cspeed
+                    + (complex_T(0,2) * om0 * (z + y * cotPhi) * tanPhi2_2)/cspeed
+                    - (om0 * helpVar1 * helpVar1) / (cspeed * (cspeed * om0 * tauG2 + complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2))
+                  );
+                helpVar3 = complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi;
+                const complex_T result = float_T(-1.0)*(
+                    math::exp(helpVar2) * k * tauG * x * Power(helpVar3,-1.5) /
+                      (
+                          om0 * math::sqrt((tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2)/(cspeed*om0)) / rho0)
+                      )
+                  );
+                return result.real() / UNIT_SPEED;
             }
 
         } /* namespace twtsfast */
