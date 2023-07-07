@@ -617,16 +617,16 @@ namespace picongpu
                 /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
                  * thus help with formal code verification through manual code inspection.
                  */
-                helpVar1 = float_T(2.0) * cspeed * t + complex_T(0,1) * cspeed * om0 * tauG2 + float_T(2.0) * z
+                const complex_T helpVar1 = float_T(2.0) * cspeed * t + complex_T(0,1) * cspeed * om0 * tauG2 + float_T(2.0) * z
                          + float_T(2.0) * y * tanPhi2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2;
-                helpVar2 = float_T(0.24) * (
+                const complex_T helpVar2 = float_T(0.25) * (
                             - (om0 * om0 * tauG2) - (complex_T(0,2) * k * x2)/(complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi)
                             - (complex_T(0,4) * om0 * y * tanPhi2) / cspeed
                             + (complex_T(0,2) * om0 * (z + y * cotPhi) * tanPhi2_2) / cspeed
                             + (om0 * helpVar1 * helpVar1) / (cspeed * (cspeed * om0 * tauG2 - complex_T(0,2) * (z + y*cotPhi) * tanPhi2_2))
                            );
-                helpVar3 = rho0 + complex_T(0,1) * z * sinPhi;
-                helpVar4 = rho0 + complex_T(0,1) * y * cosPhi - complex_T(0,1) * z * sinPhi;
+                const complex_T helpVar3 = rho0 + complex_T(0,1) * z * sinPhi;
+                const complex_T helpVar4 = rho0 + complex_T(0,1) * y * cosPhi - complex_T(0,1) * z * sinPhi;
 
                 const complex_T result = (math::exp(helpVar2) * tauG * rho0
                           *(
@@ -754,17 +754,17 @@ namespace picongpu
                 /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
                  * thus help with formal code verification through manual code inspection.
                  */
-                helpVar1 = float_T(2.0) * cspeed * t - complex_T(0,1) * cspeed * om0 * tauG2
+                const complex_T helpVar1 = float_T(2.0) * cspeed * t - complex_T(0,1) * cspeed * om0 * tauG2
                          - float_T(2.0) * z + float_T(2.0) * y * tanPhi2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2;
-                helpVar2 = float_T(0.25) * (
+                const complex_T helpVar2 = float_T(0.25) * (
                     -(om0 * om0 * tauG2) - (complex_T(0,2) * k * x2)/(complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi)
                     - (complex_T(0,4) * om0 * y * tanPhi2) / cspeed
                     + (complex_T(0,2) * om0 * (z + y * cotPhi) * tanPhi2_2)/cspeed
                     - (om0 * helpVar1 * helpVar1) / (cspeed * (cspeed * om0 * tauG2 + complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2))
                   );
-                helpVar3 = complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi;
+                const complex_T helpVar3 = complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi;
                 const complex_T result = float_T(-1.0)*(
-                    math::exp(helpVar2) * k * tauG * x * Power(helpVar3,-1.5) /
+                    math::exp(helpVar2) * k * tauG * x * math::pow(helpVar3,float_T(-1.5)) /
                       (
                           om0 * math::sqrt((tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2)/(cspeed*om0)) / rho0)
                       )
