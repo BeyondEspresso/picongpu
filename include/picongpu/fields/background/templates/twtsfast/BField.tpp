@@ -760,7 +760,7 @@ namespace picongpu
                     -(om0 * om0 * tauG2) - (complex_T(0,2) * k * x2)/(complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi)
                     - (complex_T(0,4) * om0 * y * tanPhi2) / cspeed
                     + (complex_T(0,2) * om0 * (z + y * cotPhi) * tanPhi2_2)/cspeed
-                    - (om0 * helpVar1 * helpVar1) / (cspeed * (cspeed * om0 * tauG2 + complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2))
+                    - (om0 * helpVar1 * helpVar1) / (cspeed * (cspeed * om0 * tauG2 - complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2))
                   );
                 const complex_T helpVar3 = complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi;
                 const complex_T result = float_T(-1.0)*(
