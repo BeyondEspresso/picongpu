@@ -265,11 +265,11 @@ namespace picongpu
                  */
 
                 /* Calculate Bx-component with the intra-cell offset of a By-field */
-                float_64 const Bx_By = -calcTWTSBz_Ex(pos[1], time);
+                float_64 const Bx_By = -calcTWTSBz_Ey(pos[1], time);
                 /* Calculate Bx-component with the intra-cell offset of a Bx-field */
-                float_64 const Bx_Bx = -calcTWTSBz_Ex(pos[0], time);
+                float_64 const Bx_Bx = -calcTWTSBz_Ey(pos[0], time);
 
-                /* Since we rotated all position vectors before calling calcTWTSBz_Ex, we
+                /* Since we rotated all position vectors before calling calcTWTSBz_Ey, we
                  * need to back-rotate the resulting B-field vector. Now the rotation is done
                  * analogously in the (y,x)-plane. (Reverse of the position vector transformation.)
                  *
