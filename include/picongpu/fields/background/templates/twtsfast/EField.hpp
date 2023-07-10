@@ -183,6 +183,22 @@ namespace picongpu
                  * @return Ex-field component of the non-rotated TWTS field in SI units */
                 HDINLINE float_T calcTWTSEy(float3_64 const& pos, float_64 const time) const;
 
+                /** Calculate the Ez(r,t) field, when electric field vector (Ex,0,0)
+                 *  is normal to the pulse-front-tilt plane (y,z)
+                 *
+                 * @param pos Spatial position of the target field.
+                 * @param time Absolute time (SI, including all offsets and transformations)
+                 *  for calculating the field */
+                HDINLINE float_T calcTWTSEz_Ex(float3_64 const& pos, float_64 const time) const;
+
+                /** Calculate the Ez(r,t) field here (electric field vector (0,Ey,0)
+                 *  lies within the pulse-front-tilt plane (y,z)
+                 *
+                 * @param pos Spatial position of the target field.
+                 * @param time Absolute time (SI, including all offsets and transformations)
+                 *  for calculating the field */
+                HDINLINE float_T calcTWTSEz_Ey(float3_64 const& pos, float_64 const time) const;
+
                 /** Calculate the E-field vector of the TWTS laser in SI units.
                  * @tparam T_dim Specializes for the simulation dimension
                  * @param cellIdx The total cell id counted from the start at timestep 0

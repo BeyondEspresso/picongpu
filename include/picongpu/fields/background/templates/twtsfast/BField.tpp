@@ -450,8 +450,8 @@ namespace picongpu
                 auto const yMod = float_T(pos.y() + numberOfPeriods * deltaY);
                 auto const zMod = float_T(pos.z() + numberOfPeriods * deltaZ);
 
-                auto const x = - float_T(phiPositive * pos.x() / UNIT_LENGTH);
-                auto const y = - float_T(phiPositive * yMod / UNIT_LENGTH);
+                auto const x = float_T(phiPositive * pos.x() / UNIT_LENGTH);
+                auto const y = float_T(phiPositive * yMod / UNIT_LENGTH);
                 auto const z = float_T(zMod / UNIT_LENGTH);
                 auto const t = float_T(timeMod / UNIT_TIME);
 
