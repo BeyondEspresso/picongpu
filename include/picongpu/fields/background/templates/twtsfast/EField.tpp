@@ -112,7 +112,7 @@ namespace picongpu
                 pmacc::math::sincos(phi, sinPhi, cosPhi);
                 float_X const Ey_rot = +cosPhi * float_X(Ez_Ey);
                 float_X const Ez_rot = -sinPhi * float_X(Ez_Ez);
-                
+
                 /* Finally, the E-field normalized to the peak amplitude. */
                 return float3_X(float_X(calcTWTSEx(pos[0], time)), Ey_rot, Ez_rot);
             }
@@ -139,7 +139,7 @@ namespace picongpu
                 float_64 const Ez_Ey = calcTWTSEz_Ey(pos[1], time);
                 /* Calculate Ez-component with the intra-cell offset of a Ez-field */
                 float_64 const Ez_Ez = calcTWTSEz_Ey(pos[2], time);
-                
+
                 /* Since we rotated all position vectors before calling calcTWTSEy,
                  * we need to back-rotate the resulting E-field vector.
                  *
@@ -457,7 +457,7 @@ namespace picongpu
                 /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
                  * thus help with formal code verification through manual code inspection.
                  */
-                const complex_T helpVar1 = float_T(2.0)*cspeed*t - complex_T(0,1)*cspeed*om0*tauG2 
+                const complex_T helpVar1 = float_T(2.0)*cspeed*t - complex_T(0,1)*cspeed*om0*tauG2
                                          - float_T(2.0)*z + float_T(2.0)*y*tanPhi2 - float_T(2.0)*(z + y*cotPhi)*tanPhi2_2;
                 const complex_T helpVar2 = (
                             - (om0*om0*tauG2) - (complex_T(0,2)*k*x*x)/(complex_T(0,1)*rho0 - y*cosPhi - z*sinPhi)
@@ -574,11 +574,11 @@ namespace picongpu
                 float_T const cotPhi = float_T(1.0) / math::tan(phiT);
                 float_T const tanPhi2 = math::tan(phiT / float_T(2.0));
                 float_T const sinPhi2 = math::sin(phiT / float_T(2.0));
-                
+
                 float_T const tanPhi2_2 = tanPhi2 * tanPhi2;
                 float_T const sinPhi2_2 = sinPhi2 * sinPhi2;
                 float_T const sinPhi_2 = sinPhi * sinPhi;
-                float_T const cosPhi_2 = cosPhi * cosPhi;                
+                float_T const cosPhi_2 = cosPhi * cosPhi;
 
                 float_T const tauG2 = tauG * tauG;
                 float_T const cspeed2 = cspeed * cspeed;
@@ -586,12 +586,12 @@ namespace picongpu
                 float_T const om02 = om0 * om0;
                 float_T const x2 = x * x;
                 float_T const y2 = y * y;
-                float_T const z2 = z * z;            
+                float_T const z2 = z * z;
 
                 /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
                  * thus help with formal code verification through manual code inspection.
                  */
-                const complex_T helpVar1 = 
+                const complex_T helpVar1 =
                                   float_T(2.0) * cspeed * t - complex_T(0,1) * cspeed * om0 * tauG2
                                 - float_T(2.0) * z + float_T(2.0) * y * tanPhi2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2;
 
@@ -739,7 +739,7 @@ namespace picongpu
                 float_T const om02 = om0 * om0;
                 float_T const x2 = x * x;
                 float_T const y2 = y * y;
-                float_T const z2 = z * z;            
+                float_T const z2 = z * z;
                 float_T const z3 = z2 * z;
                 float_T const x4 = x2 * x2;
 
@@ -827,7 +827,7 @@ namespace picongpu
                  * in floating-point arithmetics leading to nans, when float_T is set to float_X.
                  */
              * complex_T(
-               complex_64(1,0) / 
+               complex_64(1,0) /
                complex_64(
                + float_T(4.0) * om02 * math::sqrt(rho0 / (complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi))
                * pmacc::math::cPow(helpVar3, static_cast<uint32_t>(5u)) * (complex_T(0,-1) * cspeed * om0 * tauG2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2)
