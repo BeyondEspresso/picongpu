@@ -637,7 +637,7 @@ namespace picongpu
              )/
              (
               float_T(2.0) * om02 * math::sqrt( rho0 / ( complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi ) )
-              * helpVar3 * helpVar3 * helpVar3 * helpVar3 * ( complex_T(0,-1) * cspeed * om0 * tauG2 - float_T(2.0) * ( z + y * cotPhi) * tanPhi2_2)
+              * pmacc::math::cPow(helpVar3, static_cast<uint32_t>(4u)) * ( complex_T(0,-1) * cspeed * om0 * tauG2 - float_T(2.0) * ( z + y * cotPhi) * tanPhi2_2)
               * math::sqrt(tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2) / (cspeed * om0))
              );
 
@@ -746,7 +746,8 @@ namespace picongpu
                 /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
                  * thus help with formal code verification through manual code inspection.
                  */
-                const complex_T helpVar1 = 2*cspeed*t - complex_T(0,1)*cspeed*om0*tauG2 - 2*z + 2*y*tanPhi2 + 2*(-z - y*cotPhi)*tanPhi2_2;
+                const complex_T helpVar1 = float_T(2.0) * cspeed * t - complex_T(0,1) * cspeed * om0 * tauG2
+                    - float_T(2.0) * z + float_T(2.0) * y * tanPhi2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2;
                 const complex_T helpVar2 = float_T(0.25) * (
                     - (om02 * tauG2 ) - (complex_T(0,2) * k * x2) / (complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi)
                     - (complex_T(0,4) * om0 * y * tanPhi2) / cspeed + (complex_T(0,2) * om0 * (z + y * cotPhi) * tanPhi2_2) / cspeed
@@ -822,11 +823,16 @@ namespace picongpu
              )
                )
              )
-             /
-             (
+                /* The "round-trip" conversion in the lines below fixes a gross accuracy bug
+                 * in floating-point arithmetics leading to nans, when float_T is set to float_X.
+                 */
+             * complex_T(
+               complex_64(1,0) / 
+               complex_64(
                + float_T(4.0) * om02 * math::sqrt(rho0 / (complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi))
-               * math::pow(helpVar3, float_T(5.0)) * (complex_T(0,-1) * cspeed * om0 * tauG2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2)
+               * pmacc::math::cPow(helpVar3, static_cast<uint32_t>(5u)) * (complex_T(0,-1) * cspeed * om0 * tauG2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2)
                * math::sqrt(tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2) / (cspeed * om0))
+               )
              );
                 return result.real();
             }
