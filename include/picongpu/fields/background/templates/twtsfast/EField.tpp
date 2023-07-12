@@ -634,11 +634,17 @@ namespace picongpu
                                   )
                                 )
                )
-             )/
-             (
-              float_T(2.0) * om02 * math::sqrt( rho0 / ( complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi ) )
-              * pmacc::math::cPow(helpVar3, static_cast<uint32_t>(4u)) * ( complex_T(0,-1) * cspeed * om0 * tauG2 - float_T(2.0) * ( z + y * cotPhi) * tanPhi2_2)
-              * math::sqrt(tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2) / (cspeed * om0))
+             )
+             /* The "round-trip" conversion in the lines below fixes a gross accuracy bug
+              * in floating-point arithmetics leading to nans, when float_T is set to float_X.
+              */
+             * complex_T(
+               complex_64(1,0) /
+               complex_64(
+                float_T(2.0) * om02 * math::sqrt( rho0 / ( complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi ) )
+                * pmacc::math::cPow(helpVar3, static_cast<uint32_t>(4u)) * ( complex_T(0,-1) * cspeed * om0 * tauG2 - float_T(2.0) * ( z + y * cotPhi) * tanPhi2_2)
+                * math::sqrt(tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2) / (cspeed * om0))
+               )
              );
 
                 return result.real();
