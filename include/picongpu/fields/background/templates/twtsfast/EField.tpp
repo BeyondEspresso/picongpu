@@ -33,6 +33,7 @@
 #include <pmacc/math/Complex.hpp>
 #include <pmacc/math/Vector.hpp>
 #include <pmacc/types.hpp>
+#include <stdio.h>
 
 namespace picongpu
 {

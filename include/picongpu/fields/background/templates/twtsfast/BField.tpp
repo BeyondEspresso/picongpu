@@ -536,6 +536,7 @@ namespace picongpu
             BField::float_T BField::calcTWTSBz_Ex(float3_64 const& pos, float_64 const time) const
             {
                 using complex_T = alpaka::Complex<float_T>;
+                using complex_64 = alpaka::Complex<float_64>;
 
                 /* propagation speed of overlap normalized to the speed of light [Default: beta0=1.0] */
                 auto const beta0 = float_T(beta_0);
@@ -617,16 +618,16 @@ namespace picongpu
                 /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
                  * thus help with formal code verification through manual code inspection.
                  */
-                const complex_T helpVar1 = float_T(2.0) * cspeed * t + complex_T(0,1) * cspeed * om0 * tauG2 + float_T(2.0) * z
+                const complex_T helpVar1 = float_T(2.0) * cspeed * t - complex_T(0,1) * cspeed * om0 * tauG2 - float_T(2.0) * z
                          + float_T(2.0) * y * tanPhi2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2;
                 const complex_T helpVar2 = float_T(0.25) * (
                             - (om0 * om0 * tauG2) - (complex_T(0,2) * k * x2)/(complex_T(0,1) * rho0 - y * cosPhi - z * sinPhi)
                             - (complex_T(0,4) * om0 * y * tanPhi2) / cspeed
                             + (complex_T(0,2) * om0 * (z + y * cotPhi) * tanPhi2_2) / cspeed
-                            + (om0 * helpVar1 * helpVar1) / (cspeed * (cspeed * om0 * tauG2 - complex_T(0,2) * (z + y*cotPhi) * tanPhi2_2))
-                           );
+                            - (om0 * helpVar1 * helpVar1) * complex_T( complex_64(1,0) / complex_64(cspeed * (cspeed * om0 * tauG2 - complex_T(0,2) * (z + y*cotPhi) * tanPhi2_2))
+                           ));
                 const complex_T helpVar3 = rho0 + complex_T(0,1) * z * sinPhi;
-                const complex_T helpVar4 = rho0 + complex_T(0,1) * y * cosPhi - complex_T(0,1) * z * sinPhi;
+                const complex_T helpVar4 = rho0 + complex_T(0,1) * y * cosPhi + complex_T(0,1) * z * sinPhi;
 
                 const complex_T result = (math::exp(helpVar2) * tauG * rho0
                           *(
@@ -642,11 +643,14 @@ namespace picongpu
                             + (float_T(8.0) * om0 * y2 - complex_T(0,2) * cspeed * z) * tanPhi2_2)
                            )
                           )
-                         )/
-                        (
+                         )
+                        * complex_T(
+                        complex_64(1,0) /
+                        complex_64(
                             float_T(2.0) * cspeed * om0 * helpVar4 * helpVar4 * helpVar4 * math::sqrt(rho0 / (complex_T(0,1) * rho0 - y * cosPhi - z *sinPhi))
                             * (complex_T(0,-1) * cspeed * om0 * tauG2 - float_T(2.0) * (z + y * cotPhi) * tanPhi2_2)
                             * math::sqrt(tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2) / (cspeed * om0))
+                        )
                         );
                 return result.real() / UNIT_SPEED;
             }
