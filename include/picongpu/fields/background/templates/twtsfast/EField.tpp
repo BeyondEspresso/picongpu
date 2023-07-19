@@ -647,8 +647,20 @@ namespace picongpu
                 * math::sqrt(tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2) / (cspeed * om0))
                )
              );
+             /* Explanation for the change of the sign below: The original solution propagates in (-z)-direction.
+              * For this reason we fix this by inverting both the propagation direction and the pulse front tilt by two transforms.
+              * 1) Rotate 180° around x: coordinates (y,z)->(-y,-z) and vector components ((E,B)_(y,z)-> -(E,B)_(y,z))
+              * 2) Reverse propagation ( B = (1/c^2) *  n x E ): (E,B)->(-E,B) or (E,B)->(E,-B)
+              * 3) Phase-shift 180°: (E,B)-> -(E,B) (This does not change relevant physics, but is a clean-up to give the main E-component a positive sign.)
+              *
+              * x-pol:
+              * Ex,Ez_Ex,By,Bz_Ex (coordinates in expressions already transformed)
+              * Rotate vectors 180° around x: Ex,-Ez_Ex,-By,-Bz_Ex
+              * Flip propagation & Phase-shift: -Ex,Ez_Ex,-By,-Bz_Ex -> Ex,-Ez_Ex,By,Bz_Ex
+              * --> Thus the Ez_Ex component needs to be multiplied by -1 .
+              */
 
-                return result.real();
+                return -result.real();
             }
 
             /** Calculate the Ez(r,t) field here

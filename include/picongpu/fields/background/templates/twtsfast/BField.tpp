@@ -773,7 +773,18 @@ namespace picongpu
                           om0 * math::sqrt((tauG2 - (complex_T(0,2) * (z + y * cotPhi) * tanPhi2_2)/(cspeed*om0)) / rho0)
                       )
                   );
-                return result.real() / UNIT_SPEED;
+                /* Explanation for the change in sign below: The original solution propagates in (-z)-direction. For this reason we fix this by inverting both the propagation direction and the pulse front tilt by two transforms.
+                 * 1) Rotate 180° around x: coordinates (y,z)->(-y,-z) and vector components ((E,B)_(y,z)-> -(E,B)_(y,z))
+                 * 2) Reverse propagation ( B = (1/c^2) *  n x E ): (E,B)->(-E,B) or (E,B)->(E,-B)
+                 * 3) Phase-shift 180°: (E,B)-> -(E,B) (This does not change relevant physics, but is a clean-up to give the main E-component a positive sign.)
+                 *
+                 * yz-pol:
+                 * Ey,Ez_Ey,Bx,Bz_Ey (coordinates in expressions already transformed)
+                 * Rotate vectors 180° around x: -Ey,-Ez_Ey,Bx,-Bz_Ey
+                 * Flip propagation & Phase-shift: -Ey,-Ez_Ey,-Bx,Bz_Ey -> Ey,Ez_Ey,Bx,-Bz_Ey
+                 * --> Thus the Bz_Ey component has to be multiplied by -1 .
+                 */
+                return -result.real() / UNIT_SPEED;
             }
 
         } /* namespace twtsfast */
