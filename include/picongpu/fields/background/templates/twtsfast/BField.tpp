@@ -328,7 +328,7 @@ namespace picongpu
             template<uint32_t T_component>
             HDINLINE float_X BField::getComponent(floatD_X const& cellIdx, float_X const currentStep) const
             {
-                // The optimized way is only implemented for 3d, fall back to full field calculation in 2d
+                // The optimized way is only implemented for 3D, fall back to full field calculation in 2D
                 if constexpr(simDim == DIM3)
                 {
                     float_64 const time_SI = float_64(currentStep) * dt - tdelay;
@@ -337,11 +337,14 @@ namespace picongpu
                         zeroShifts[component] = floatD_X::create(0.0);
                     pmacc::math::Vector<floatD_64, detail::numComponents> const bFieldPositions_SI
                         = detail::getFieldPositions_SI(cellIdx, halfSimSize, zeroShifts, unit_length, focus_y_SI, phi);
-                    // Explicitly use a 3d vector so that this function compiles for 2d as well
+                    // Explicitly use a 3D vector so that this function compiles for 2d as well
                     auto const pos = float3_64{
                         bFieldPositions_SI[T_component][0],
                         bFieldPositions_SI[T_component][1],
                         bFieldPositions_SI[T_component][2]};
+                    float_X sinPhi;
+                    float_X cosPhi;
+                    pmacc::math::sincos(phi, sinPhi, cosPhi);
                     switch(pol)
                     {
                     case LINEAR_X:
@@ -349,30 +352,43 @@ namespace picongpu
                             return 0.0_X;
                         else
                         {
-                            auto const field1 = calcTWTSBy(pos, time_SI);
-                            auto const field2 = calcTWTSBz_Ex(pos, time_SI);
-                            float_X sinPhi;
-                            float_X cosPhi;
-                            pmacc::math::sincos(phi, sinPhi, cosPhi);
                             if constexpr(T_component == 1)
-                                return -sinPhi * field1 + cosPhi * field2;
+                                /* Calculate By-component the the intra-cell offset of a By-field */
+                                float_64 const By_By = calcTWTSBy(pos, time_SI);
+                                /* Calculate Bz-component the the intra-cell offset of a By-field */
+                                float_64 const Bz_By = calcTWTSBz_Ex(pos, time_SI);
+                                /* Since we rotated all position vectors before calling calcTWTSBy and calcTWTSBz_Ex,
+                                 * we need to back-rotate the resulting B-field vector.
+                                 *
+                                 * RotationMatrix[-(PI/2+phi)].(By,Bz) for rotating back the field vectors.
+                                 */
+                                return -sinPhi * float_X(By_By) + cosPhi * float_X(Bz_By);
                             if constexpr(T_component == 2)
-                                return -cosPhi * field1 - sinPhi * field2;
+                                /* Calculate By-component the the intra-cell offset of a Bz-field */
+                                float_64 const By_Bz = calcTWTSBy(pos, time_SI);
+                                /* Calculate Bz-component the the intra-cell offset of a Bz-field */
+                                float_64 const Bz_Bz = calcTWTSBz_Ex(pos, time_SI);
+                                /* Since we rotated all position vectors before calling calcTWTSBy and calcTWTSBz_Ex,
+                                 * we need to back-rotate the resulting B-field vector.
+                                 *
+                                 * RotationMatrix[-(PI/2+phi)].(By,Bz) for rotating back the field vectors.
+                                 */
+                                return -cosPhi * float_X(By_Bz) - sinPhi * float_X(Bz_Bz);
                         }
 
                     case LINEAR_YZ:
                         if constexpr(T_component == 0)
-                            return calcTWTSBx(pos, time_SI);
+                            return float_X(calcTWTSBx(pos, time_SI));
                         else
                         {
-                            auto const field = calcTWTSBz_Ey(pos, time_SI);
-                            float_X sinPhi;
-                            float_X cosPhi;
-                            pmacc::math::sincos(phi, sinPhi, cosPhi);
                             if constexpr(T_component == 1)
-                                return cosPhi * field;
+                                /* Calculate Bz-component with the intra-cell offset of a By-field */
+                                float_64 const Bz_By = calcTWTSBz_Ey(pos, time_SI);
+                                return +cosPhi * float_X(Bz_By);
                             if constexpr(T_component == 2)
-                                return -sinPhi * field;
+                                /* Calculate Bz-component with the intra-cell offset of a Bz-field */
+                                float_64 const Bz_Bz = calcTWTSBz_Ey(pos, time_SI);
+                                return -sinPhi * float_X(Bz_Bz);
                         }
                     }
                     // we should never be here

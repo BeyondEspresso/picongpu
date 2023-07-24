@@ -342,27 +342,63 @@ namespace picongpu
                         eFieldPositions_SI[T_component][0],
                         eFieldPositions_SI[T_component][1],
                         eFieldPositions_SI[T_component][2]};
+                    float_X sinPhi;
+                    float_X cosPhi;
+                    pmacc::math::sincos(phi, sinPhi, cosPhi);
                     switch(pol)
                     {
                     case LINEAR_X:
                         if constexpr(T_component == 0)
                             return static_cast<float_X>(calcTWTSEx(pos, time_SI));
                         else
-                            return 0.0_X;
+                        {
+                            if constexpr(T_component == 1)
+                                /* Calculate Ez-component with the intra-cell offset of a Ey-field */
+                                float_64 const Ez_Ey = calcTWTSEz_Ex(pos, time_SI);
+                                /* Since we rotated all position vectors before calling calcTWTSEz_Ex,
+                                 * we need to back-rotate the resulting E-field vector.
+                                 *
+                                 * RotationMatrix[-(PI/2+phi)].(Ey,Ez) for rotating back the field-vectors.
+                                 */
+                                return +cosPhi * float_X(Ez_Ey);
+                            if constexpr(T_component == 2)
+                                /* Calculate Ez-component with the intra-cell offset of a Ez-field */
+                                float_64 const Ez_Ez = calcTWTSEz_Ex(pos, time_SI);
+                                /* Since we rotated all position vectors before calling calcTWTSEz_Ex,
+                                 * we need to back-rotate the resulting E-field vector.
+                                 *
+                                 * RotationMatrix[-(PI/2+phi)].(Ey,Ez) for rotating back the field-vectors.
+                                 */
+                                return -sinPhi * float_X(Ez_Ez);
+                        }
 
                     case LINEAR_YZ:
                         if constexpr(T_component == 0)
                             return 0.0_X;
                         else
                         {
-                            auto const field = calcTWTSEy(pos, time_SI);
-                            float_X sinPhi;
-                            float_X cosPhi;
-                            pmacc::math::sincos(phi, sinPhi, cosPhi);
                             if constexpr(T_component == 1)
-                                return -sinPhi * field;
+                                /* Calculate Ey-component with the intra-cell offset of a Ey-field */
+                                float_64 const Ey_Ey = calcTWTSEy(pos, time_SI);
+                                /* Calculate Ez-component with the intra-cell offset of a Ey-field */
+                                float_64 const Ez_Ey = calcTWTSEz_Ey(pos, time_SI);
+                                /* Since we rotated all position vectors before calling calcTWTSEy and calcTWTSEz_Ey,
+                                 * we need to back-rotate the resulting E-field vector.
+                                 *
+                                 * RotationMatrix[-(PI/2+phi)].(Ey,Ez) for rotating back the field-vectors.
+                                 */
+                                return -sinPhi * float_X(Ey_Ey) + cosPhi * float_X(Ez_Ey);
                             if constexpr(T_component == 2)
-                                return -cosPhi * field;
+                                 /* Calculate Ey-component with the intra-cell offset of a Ez-field */
+                                float_64 const Ey_Ez = calcTWTSEy(pos, time_SI);
+                                /* Calculate Ez-component with the intra-cell offset of a Ez-field */
+                                float_64 const Ez_Ez = calcTWTSEz_Ey(pos, time_SI);
+                                /* Since we rotated all position vectors before calling calcTWTSEy and calcTWTSEz_Ey,
+                                 * we need to back-rotate the resulting E-field vector.
+                                 *
+                                 * RotationMatrix[-(PI/2+phi)].(Ey,Ez) for rotating back the field-vectors.
+                                 */
+                                return -cosPhi * float_X(Ey_Ez) - sinPhi * float_X(Ez_Ez);
                         }
                     }
                     // we should never be here
