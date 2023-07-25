@@ -353,6 +353,7 @@ namespace picongpu
                         else
                         {
                             if constexpr(T_component == 1)
+                            {
                                 /* Calculate Ez-component with the intra-cell offset of a Ey-field */
                                 float_64 const Ez_Ey = calcTWTSEz_Ex(pos, time_SI);
                                 /* Since we rotated all position vectors before calling calcTWTSEz_Ex,
@@ -361,7 +362,9 @@ namespace picongpu
                                  * RotationMatrix[-(PI/2+phi)].(Ey,Ez) for rotating back the field-vectors.
                                  */
                                 return +cosPhi * float_X(Ez_Ey);
+                            }
                             if constexpr(T_component == 2)
+                            {
                                 /* Calculate Ez-component with the intra-cell offset of a Ez-field */
                                 float_64 const Ez_Ez = calcTWTSEz_Ex(pos, time_SI);
                                 /* Since we rotated all position vectors before calling calcTWTSEz_Ex,
@@ -370,6 +373,7 @@ namespace picongpu
                                  * RotationMatrix[-(PI/2+phi)].(Ey,Ez) for rotating back the field-vectors.
                                  */
                                 return -sinPhi * float_X(Ez_Ez);
+                            }
                         }
 
                     case LINEAR_YZ:
@@ -378,6 +382,7 @@ namespace picongpu
                         else
                         {
                             if constexpr(T_component == 1)
+                            {
                                 /* Calculate Ey-component with the intra-cell offset of a Ey-field */
                                 float_64 const Ey_Ey = calcTWTSEy(pos, time_SI);
                                 /* Calculate Ez-component with the intra-cell offset of a Ey-field */
@@ -388,7 +393,9 @@ namespace picongpu
                                  * RotationMatrix[-(PI/2+phi)].(Ey,Ez) for rotating back the field-vectors.
                                  */
                                 return -sinPhi * float_X(Ey_Ey) + cosPhi * float_X(Ez_Ey);
+                            }
                             if constexpr(T_component == 2)
+                            {
                                  /* Calculate Ey-component with the intra-cell offset of a Ez-field */
                                 float_64 const Ey_Ez = calcTWTSEy(pos, time_SI);
                                 /* Calculate Ez-component with the intra-cell offset of a Ez-field */
@@ -399,6 +406,7 @@ namespace picongpu
                                  * RotationMatrix[-(PI/2+phi)].(Ey,Ez) for rotating back the field-vectors.
                                  */
                                 return -cosPhi * float_X(Ey_Ez) - sinPhi * float_X(Ez_Ez);
+                            }
                         }
                     }
                     // we should never be here
