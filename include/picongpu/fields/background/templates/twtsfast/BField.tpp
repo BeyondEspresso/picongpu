@@ -386,13 +386,17 @@ namespace picongpu
                         else
                         {
                             if constexpr(T_component == 1)
+                            {
                                 /* Calculate Bz-component with the intra-cell offset of a By-field */
                                 float_64 const Bz_By = calcTWTSBz_Ey(pos, time_SI);
                                 return +cosPhi * float_X(Bz_By);
+                            }
                             if constexpr(T_component == 2)
+                            {
                                 /* Calculate Bz-component with the intra-cell offset of a Bz-field */
                                 float_64 const Bz_Bz = calcTWTSBz_Ey(pos, time_SI);
                                 return -sinPhi * float_X(Bz_Bz);
+                            }
                         }
                     }
                     // we should never be here
