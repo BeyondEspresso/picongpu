@@ -353,6 +353,7 @@ namespace picongpu
                         else
                         {
                             if constexpr(T_component == 1)
+                            {
                                 /* Calculate By-component the the intra-cell offset of a By-field */
                                 float_64 const By_By = calcTWTSBy(pos, time_SI);
                                 /* Calculate Bz-component the the intra-cell offset of a By-field */
@@ -363,7 +364,9 @@ namespace picongpu
                                  * RotationMatrix[-(PI/2+phi)].(By,Bz) for rotating back the field vectors.
                                  */
                                 return -sinPhi * float_X(By_By) + cosPhi * float_X(Bz_By);
+                            }
                             if constexpr(T_component == 2)
+                            {
                                 /* Calculate By-component the the intra-cell offset of a Bz-field */
                                 float_64 const By_Bz = calcTWTSBy(pos, time_SI);
                                 /* Calculate Bz-component the the intra-cell offset of a Bz-field */
@@ -374,6 +377,7 @@ namespace picongpu
                                  * RotationMatrix[-(PI/2+phi)].(By,Bz) for rotating back the field vectors.
                                  */
                                 return -cosPhi * float_X(By_Bz) - sinPhi * float_X(Bz_Bz);
+                            }
                         }
 
                     case LINEAR_YZ:
@@ -382,13 +386,17 @@ namespace picongpu
                         else
                         {
                             if constexpr(T_component == 1)
+                            {
                                 /* Calculate Bz-component with the intra-cell offset of a By-field */
                                 float_64 const Bz_By = calcTWTSBz_Ey(pos, time_SI);
                                 return +cosPhi * float_X(Bz_By);
+                            }
                             if constexpr(T_component == 2)
+                            {
                                 /* Calculate Bz-component with the intra-cell offset of a Bz-field */
                                 float_64 const Bz_Bz = calcTWTSBz_Ey(pos, time_SI);
                                 return -sinPhi * float_X(Bz_Bz);
+                            }
                         }
                     }
                     // we should never be here
