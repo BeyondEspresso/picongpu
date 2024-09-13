@@ -9,7 +9,7 @@
  *
  * PIConGPU is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -27,8 +27,8 @@
  * 2nd omega-order TWTS-phase-terms for the B-field-component transverse to direction of propagation, and additionally
  * neglect the 1st-order TWTS-phase-terms for the B-field-component longitudinal to the direction of propagation.
  *
- * Specifically, this TWTSfast approximation assumes a special case, where the transverse extent (but not its height wx
- * or its pulse duration) of the TWTS-laser wy is assumed to be infinite. While this special case of the TWTS laser
+ * Specifically, this TWTStight approximation assumes a special case, where the transverse extent (but not its height
+ * wx or its pulse duration) of the TWTS-laser wy is assumed to be infinite. While this special case of the TWTS laser
  * applies to a large range of use cases, the resulting form allows to use different spatial and time coordinates
  * (timeMod, yMod and zMod), which allow long term numerical stability beyond 100000 timesteps at single precision,
  * as well as for mitigating errors of the approximations far from the coordinate origin.
@@ -39,7 +39,7 @@
  *
  * float_64 const tanAlpha = (float_64(1.0) - beta_0 * math::cos(phi)) / (beta_0 * math::sin(phi));
  * float_64 const tanFocalLine = math::tan(PI / float_64(2.0) - phi);
- * float_64 const deltaT = wavelength_SI / sim.si.getSpeedOfLight() * (float_64(1.0) + tanAlpha / tanFocalLine);
+ * float_64 const deltaT = wavelength_SI / SI::SPEED_OF_LIGHT_SI * (float_64(1.0) + tanAlpha / tanFocalLine);
  * float_64 const deltaY = wavelength_SI / tanFocalLine;
  * float_64 const deltaZ = -wavelength_SI;
  * float_64 const numberOfPeriods = math::floor(time / deltaT);
@@ -55,5 +55,16 @@
 
 #pragma once
 
-#include "picongpu/fields/background/templates/twtsfast/BField.hpp"
-#include "picongpu/fields/background/templates/twtsfast/EField.hpp"
+#include "picongpu/fields/background/templates/twtstight/BField.hpp"
+#include "picongpu/fields/background/templates/twtstight/EField.hpp"
+
+namespace picongpu
+{
+    namespace templates
+    {
+        namespace twtstight
+        {
+            constexpr uint32_t numSigmas = 10;
+        } // namespace twtstight
+    } // namespace templates
+} // namespace picongpu
