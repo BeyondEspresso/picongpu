@@ -1,4 +1,4 @@
-/* Copyright 2014-2023 Alexander Debus
+/* Copyright 2014-2023 Alexander Debus, Axel Huebl
  *
  * This file is part of PIConGPU.
  *
@@ -9,7 +9,7 @@
  *
  * PIConGPU is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -20,5 +20,17 @@
 
 #pragma once
 
-#include "picongpu/fields/background/templates/twtsfast/BField.tpp"
-#include "picongpu/fields/background/templates/twtsfast/EField.tpp"
+namespace picongpu
+{
+    namespace templates
+    {
+        namespace twtstight
+        {
+            namespace detail
+            {
+                /** Number of field components used in the simulation. [Default: 3 for both 2D and 3D] */
+                uint32_t const numComponents = 3;
+            } /* namespace detail */
+        } /* namespace twtstight*/
+    } /* namespace templates */
+} /* namespace picongpu */

@@ -1,4 +1,4 @@
-/* Copyright 2014-2023 Alexander Debus, Axel Huebl, Sergei Bastrakov
+/* Copyright 2014-2024 Alexander Debus, Axel Huebl, Sergei Bastrakov
  *
  * This file is part of PIConGPU.
  *
@@ -9,7 +9,7 @@
  *
  * PIConGPU is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "picongpu/fields/background/templates/twtsfast/numComponents.hpp"
+#include "picongpu/fields/background/templates/twtstight/numComponents.hpp"
 
 #include <pmacc/dimensions/DataSpace.hpp>
 #include <pmacc/math/Vector.hpp>
@@ -32,27 +32,12 @@ namespace picongpu
     namespace templates
     {
         /* Traveling-wave Thomson scattering laser pulse */
-        namespace twtsfast
+        namespace twtstight
         {
             class EField
             {
             public:
-                using float_T = float_X;
-
-                enum PolarizationType
-                {
-                    /** The linear polarization of the TWTS laser is defined
-                     *  relative to the plane of the pulse front tilt.
-                     *
-                     *  Polarisation is normal to the reference plane.
-                     *  Use Ex-fields (and corresponding B-fields) in TWTS laser internal coordinate system.
-                     */
-                    LINEAR_X = 1u,
-                    /** Polarization lies within the reference plane.
-                     *  Use Ey-fields (and corresponding B-fields) in TWTS laser internal coordinate system.
-                     */
-                    LINEAR_YZ = 2u,
-                };
+                using float_T = float_64;
 
                 /** Center of simulation volume in number of cells */
                 PMACC_ALIGN(halfSimSize, DataSpace<simDim>);
@@ -91,8 +76,9 @@ namespace picongpu
                  *  the laser gradually enters the simulation volume? [Default: TRUE]
                  */
                 PMACC_ALIGN(auto_tdelay, bool const);
-                /** Polarization of TWTS laser */
-                PMACC_ALIGN(pol, PolarizationType const);
+                /** Polarization of TWTS laser with respect to x-axis around propagation direction [rad, default = 0. *
+                 * (PI/180.) ] */
+                PMACC_ALIGN(polAngle, float_X const);
 
                 /** Electric field of the TWTS laser
                  *
@@ -103,14 +89,16 @@ namespace picongpu
                  * @param w_x beam waist: distance from the axis where the pulse electric field
                  *  decreases to its 1/e^2-th part at the focus position of the laser [m]
                  * @param phi interaction angle between TWTS laser propagation vector and
-                 *  the y-axis [rad, default = 90.*(PI/180.)]
+                 *  the y-axis [rad, default = 90. * (PI/180.) ]
                  * @param beta_0 propagation speed of overlap normalized to
                  *  the speed of light [c, default = 1.0]
                  * @param tdelay_user manual time delay if auto_tdelay is false
                  * @param auto_tdelay calculate the time delay such that the TWTS pulse is not
                  *  inside the simulation volume at simulation start timestep = 0 [default = true]
-                 * @param pol dtermines the TWTS laser polarization, which is either normal or parallel
-                 *  to the laser pulse front tilt plane [ default= LINEAR_X , LINEAR_YZ ]
+                 * @param polAngle determines the TWTS laser polarization angle with respect to x-axis around
+                 * propagation direction [rad, default = 0. * (PI/180.) ] Normal to laser pulse front tilt plane:
+                 * polAngle = 0.0 * (PI/180.) (linear polarization parallel to x-axis) Parallel to laser pulse front
+                 * tilt plane: polAngle = 90.0 * (PI/180.) (linear polarization parallel to yz-plane)
                  */
                 HINLINE
                 EField(
@@ -122,7 +110,7 @@ namespace picongpu
                     float_X const beta_0 = 1.0,
                     float_64 const tdelay_user_SI = 0.0,
                     bool const auto_tdelay = true,
-                    PolarizationType const pol = LINEAR_X);
+                    float_X const polAngle = 0. * (PI / 180.));
 
                 /** Specify your background field E(r,t) here
                  *
@@ -183,25 +171,24 @@ namespace picongpu
                  * @return Ex-field component of the non-rotated TWTS field in SI units */
                 HDINLINE float_T calcTWTSEy(float3_64 const& pos, float_64 const time) const;
 
+                /** Calculate the Ez(r,t) field, when electric field vector (Ex,0,0)
+                 *  is normal to the pulse-front-tilt plane (y,z)
+                 *
+                 * @param pos Spatial position of the target field.
+                 * @param time Absolute time (SI, including all offsets and transformations)
+                 *  for calculating the field */
+                HDINLINE float_T calcTWTSEz(float3_64 const& pos, float_64 const time) const;
+
                 /** Calculate the E-field vector of the TWTS laser in SI units.
                  * @tparam T_dim Specializes for the simulation dimension
                  * @param cellIdx The total cell id counted from the start at timestep 0
-                 * @return Efield vector of the rotated TWTS field in SI units */
+                 * @return Efield vector of the TWTS field in SI units */
                 template<unsigned T_dim>
                 HDINLINE float3_X getTWTSEfield_Normalized(
                     pmacc::math::Vector<floatD_64, detail::numComponents> const& eFieldPositions_SI,
                     float_64 const time) const;
-
-                /** Calculate the E-field vector of the "in-plane polarized" TWTS laser in SI units.
-                 * @tparam T_dim Specializes for the simulation dimension
-                 * @param cellIdx The total cell id counted from the start at timestep 0
-                 * @return Efield vector of the rotated TWTS field in SI units */
-                template<unsigned T_dim>
-                HDINLINE float3_X getTWTSEfield_Normalized_Ey(
-                    pmacc::math::Vector<floatD_64, detail::numComponents> const& eFieldPositions_SI,
-                    float_64 const time) const;
             };
 
-        } /* namespace twtsfast */
+        } /* namespace twtstight */
     } /* namespace templates */
 } /* namespace picongpu */
