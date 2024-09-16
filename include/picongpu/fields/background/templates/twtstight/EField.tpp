@@ -248,7 +248,6 @@ namespace picongpu
                 auto const tauG = float_T(pulselength_SI * 2.0 / sim.unit.time());
                 /* w0 is wx here --> w0 could be replaced by wx */
                 auto const w0 = float_T(w_x_SI / sim.unit.length());
-                auto const rho0 = float_T(PI * w0 * w0 / lambda0);
                 auto const k = float_T(2.0 * PI / lambda0);
 
                 /* In order to calculate in single-precision and in order to account for errors in
@@ -419,7 +418,6 @@ namespace picongpu
                 auto const tauG = float_T(pulselength_SI * 2.0 / sim.unit.time());
                 /* w0 is wx here --> w0 could be replaced by wx */
                 auto const w0 = float_T(w_x_SI / sim.unit.length());
-                auto const rho0 = float_T(PI * w0 * w0 / lambda0);
                 auto const k = float_T(2.0 * PI / lambda0);
 
                 /* In order to calculate in single-precision and in order to account for errors in
@@ -457,9 +455,6 @@ namespace picongpu
                 float_T const cosPhi_2 = cosPhi * cosPhi;
                 float_T const sinPolAngle = math::sin(polAngle);
                 float_T const cosPolAngle = math::cos(polAngle);
-                float_T const sin2Phi = math::sin(float_T(2.0) * phiT);
-                float_T const cos2Phi = math::cos(float_T(2.0) * phiT);
-                float_T const cos3Phi = math::cos(float_T(3.0) * phiT);
 
                 float_T const x2 = x * x;
                 float_T const z2 = z * z;
@@ -475,7 +470,6 @@ namespace picongpu
                 complex_T const zHelp = (-z - (complex_T(0, 1) * k * w02) / float_T(2.0));
                 complex_T const rhoP02 = x2 + zHelp * zHelp;
                 complex_T const rhoP0 = math::sqrt(rhoP02);
-                complex_T const rhoP03 = rhoP02 * rhoP0;
 
                 float_T const besselI0const = pmacc::math::bessel::i0(kxRhoR0);
                 complex_T const besselJ0const = pmacc::math::bessel::j0(rhoP0 * kRho0);
@@ -557,7 +551,6 @@ namespace picongpu
                 auto const tauG = float_T(pulselength_SI * 2.0 / sim.unit.time());
                 /* w0 is wx here --> w0 could be replaced by wx */
                 auto const w0 = float_T(w_x_SI / sim.unit.length());
-                auto const rho0 = float_T(PI * w0 * w0 / lambda0);
                 auto const k = float_T(2.0 * PI / lambda0);
 
                 /* In order to calculate in single-precision and in order to account for errors in

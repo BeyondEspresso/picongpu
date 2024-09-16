@@ -24,8 +24,6 @@
 
 #pragma once
 
-#include "picongpu/param/grid.param"
-
 /** Define common parameters of the TWEAC laser pulses
  */
 namespace picongpu
@@ -96,7 +94,7 @@ namespace picongpu
 #ifndef PARAM_PHI
 #    define PARAM_PHI 3.5
 #endif
-                constexpr float_64 PHI = PARAM_PHI * (PI / 180.); // 3.5 * (PI/180.); //5.00 * (PI/180.);
+                constexpr float_64 PHI = PARAM_PHI * (PI / 180.);
 
 
                 /** propagation speed of overlap normalized to
@@ -107,7 +105,7 @@ namespace picongpu
                 /** manual time delay if auto_tdelay is false
                  *
                  * unit: s */
-                constexpr float_64 TDELAY = 50.0e-6 / sim.si.getSpeedOfLight(); // 66.7e-6 / SI::SPEED_OF_LIGHT_SI;
+                constexpr float_64 TDELAY = 50.0e-6 / sim.si.getSpeedOfLight();
 
                 /** calculate the time delay such that the TWTS pulse is not
                  *  inside the simulation volume at simulation start timestep = 0 [default = true]
