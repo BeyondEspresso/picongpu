@@ -22,10 +22,7 @@
  * This background field implements a obliquely incident, cylindrically-focused, pulse-front tilted laser for some
  * incidence angle phi as used for [1].
  *
- * The TWTS implementation generally follows the definition of eq. (7) in [1]. In deriving the magnetic field
- * components, a slowly-varying wave approximation was assumed, by neglegting the spatial derivatives of the
- * 2nd omega-order TWTS-phase-terms for the B-field-component transverse to direction of propagation, and additionally
- * neglect the 1st-order TWTS-phase-terms for the B-field-component longitudinal to the direction of propagation.
+ * The TWTS implementation generally follows the definition of eq. (7) in [1].
  *
  * Specifically, this TWTStight approximation assumes a special case, where the transverse extent (but not its height
  * wx or its pulse duration) of the TWTS-laser wy is assumed to be infinite. While this special case of the TWTS laser
@@ -37,15 +34,12 @@
  * using relative coordinates (i.e. from a finite coordinate range) only. All these quantities have to be calculated
  * in double precision.
  *
- * float_64 const tanAlpha = (float_64(1.0) - beta_0 * math::cos(phi)) / (beta_0 * math::sin(phi));
- * float_64 const tanFocalLine = math::tan(PI / float_64(2.0) - phi);
- * float_64 const deltaT = wavelength_SI / SI::SPEED_OF_LIGHT_SI * (float_64(1.0) + tanAlpha / tanFocalLine);
- * float_64 const deltaY = wavelength_SI / tanFocalLine;
- * float_64 const deltaZ = -wavelength_SI;
- * float_64 const numberOfPeriods = math::floor(time / deltaT);
- * float_T const timeMod = float_T(time - numberOfPeriods * deltaT);
- * float_T const yMod = float_T(pos.y() + numberOfPeriods * deltaY);
- * float_T const zMod = float_T(pos.z() + numberOfPeriods * deltaZ);
+ * float_64 const tanAlpha = (1.0 - beta_0 * math::cos(phi)) / (beta_0 * math::sin(phi));
+ * float_64 const tanFocalLine = math::tan(PI / 2.0 - phi);
+ * float_64 const deltaT = wavelength_SI / sim.si.getSpeedOfLight() * (1.0 + tanAlpha / tanFocalLine);
+ * float_64 const deltaY = wavelength_SI * math::cos(phi) + wavelength_SI * math::sin(phi) * math::sin(phi) /
+ * math::sin(phi); float_64 const numberOfPeriods = math::floor(time / deltaT); auto const timeMod = float_T(time -
+ * numberOfPeriods * deltaT); auto const yMod = float_T(pos.y() - numberOfPeriods * deltaY);
  *
  * Literature:
  * [1] Steiniger et al., "Optical free-electron lasers with Traveling-Wave Thomson-Scattering",
