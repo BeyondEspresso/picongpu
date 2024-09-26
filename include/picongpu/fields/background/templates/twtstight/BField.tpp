@@ -270,7 +270,6 @@ namespace picongpu
                 float_T sinPhi;
                 float_T cosPhi;
                 pmacc::math::sincos(phiT, sinPhi, cosPhi);
-                float_T const sinPhi2 = math::sin(phiT / float_T(2.0));
                 float_T const cosPhi2 = math::cos(phiT / float_T(2.0));
                 float_T const tanPhi2 = math::tan(phiT / float_T(2.0));
                 float_T const sinPhi_2 = sinPhi * sinPhi;
@@ -278,52 +277,39 @@ namespace picongpu
                 float_T const sinPolAngle = math::sin(polAngle);
                 float_T const cosPolAngle = math::cos(polAngle);
 
+                complex_T I = complex_T(0, 1);
                 float_T const x2 = x * x;
-                float_T const z2 = z * z;
-                float_T const rho2 = x2 + z2;
                 float_T const tauG2 = tauG * tauG;
-                float_T const cspeed2 = cspeed * cspeed;
-                float_T const omega02 = omega0 * omega0;
                 float_T const psi0 = float_T(2.0) / k;
                 float_T const w02 = w0 * w0;
-                float_T const w04 = w02 * w02;
-                float_T const kRho0 = omega0 / cspeed * sinPhi;
-                float_T const kxRhoR0 = (k * k * sinPhi * w02) / float_T(2.0);
-                complex_T const zHelp = (-z - (complex_T(0, 1) * k * w02) / float_T(2.0));
-                complex_T const rhoP02 = x2 + zHelp * zHelp;
-                complex_T const rhoP0 = math::sqrt(rhoP02);
 
-                float_T const besselI0const = pmacc::math::bessel::i0(kxRhoR0);
-                complex_T const besselJ0const = pmacc::math::bessel::j0(rhoP0 * kRho0);
-                complex_T const besselJ1const = pmacc::math::bessel::j1(rhoP0 * kRho0);
+                complex_T const nu = (y * cosPhi - z * sinPhi) / cspeed;
+                complex_T const xi = (-z * cosPhi - y * sinPhi) * tanPhi2 / cspeed;
+                complex_T const rhom
+                    = math::sqrt(x2 + pmacc::math::cPow(-z - complex_T(0, 0.5) * k * w02, static_cast<uint32_t>(2u)));
+                complex_T const rhom2 = rhom * rhom;
+                complex_T const Xm = -z - complex_T(0, 0.5) * k * w02;
+                float_T const besselI0const = pmacc::math::bessel::i0(k * k * sinPhi * w02 / float_T(2.0));
+                complex_T const besselJ0const = pmacc::math::bessel::j0(k * rhom * sinPhi);
+                complex_T const besselJ1const = pmacc::math::bessel::j1(k * rhom * sinPhi);
 
-                /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
-                 * thus help with formal code verification through manual code inspection.
-                 */
-                float_T const helpVar0 = (cspeed * t - y * cosPhi + z * sinPhi);
-                complex_T const helpVar1 = float_T(2.0)
-                    * pmacc::math::cPow((cspeed * t - y) * cosPhi2 + z * sinPhi2, static_cast<uint32_t>(2u))
-                    / (cspeed * omega0 * tauG2 + cspeed * omega0 * tauG2 * cosPhi + complex_T(0, 2) * z * tanPhi2);
-                complex_T const helpVar2 = math::sqrt(
-                    (float_T(4.0) * cspeed2 * rho2 + complex_T(0, 4) * cspeed * omega0 * z * w02 - omega02 * w04)
-                    / (omega0 + omega0 * cosPhi));
-                complex_T const helpVar3 = math::exp(
-                    (omega0 * (complex_T(0, 1) * z * sinPhi - complex_T(0, 1) * helpVar0 + helpVar1)) / cspeed);
-                complex_T const helpVar4 = math::sqrt(
-                    float_T(4.0) * cspeed2 * rho2 + complex_T(0, 4) * cspeed * omega0 * z * w02 - omega02 * w04);
-                complex_T const helpVar5 = besselI0const * helpVar2
-                    * math::sqrt(omega0 * tauG2 + omega0 * tauG2 * cosPhi + (complex_T(0, 2) * z * tanPhi2) / cspeed);
+                complex_T const zeroOrder = tauG * math::sqrt(omega0 * (float_T(1.0) + cosPhi))
+                    / (math::sqrt(float_T(2.0))
+                       * math::exp(
+                           omega0 * pmacc::math::cPow((t - nu + xi) * cosPhi2, static_cast<uint32_t>(2u))
+                           / (+(omega0 * tauG2) / float_T(2.0) - complex_T(0, 1) * nu
+                              + ((omega0 * tauG2) / float_T(2.0) + complex_T(0, 1) * (nu - xi)) * cosPhi))
+                       * math::sqrt(
+                           +(omega0 * tauG2) / float_T(2.0) - I * nu
+                           + ((omega0 * tauG2) / float_T(2.0) + I * (nu - xi)) * cosPhi));
 
-                complex_T const result
-                    = (omega0 * tauG * sinPhi
-                       * (float_T(2.0) * cspeed * besselJ1const
-                              * (z * cosPolAngle * (float_T(1.0) + cosPhi_2)
-                                 + (z - float_T(2.0) * x * cosPhi - z * cosPhi_2) * sinPolAngle)
-                          + complex_T(0, 1) * omega0 * besselJ1const
-                              * (cosPolAngle * (float_T(1.0) + cosPhi_2) + sinPolAngle * sinPhi_2) * w02
-                          + complex_T(0, 1) * besselJ0const * (cosPolAngle - sinPolAngle) * sinPhi_2 * helpVar4)
-                       * psi0)
-                    / (float_T(4.0) * cspeed2 * helpVar3 * helpVar5);
+                complex_T const result = (math::exp(I * (omega0 * t - k * y * cosPhi)) * k * zeroOrder * sinPhi
+                                          * (-(besselJ1const
+                                               * (Xm * cosPolAngle * (float_T(1.0) + cosPhi_2)
+                                                  + (Xm + float_T(2.0) * x * cosPhi - Xm * cosPhi_2) * sinPolAngle))
+                                             + I * rhom * besselJ0const * (cosPolAngle - sinPolAngle) * sinPhi_2)
+                                          * psi0)
+                    / (float_T(4.0) * cspeed * rhom * besselI0const);
 
                 return result.real() / sim.unit.speed();
             }
@@ -408,102 +394,54 @@ namespace picongpu
                 float_T sinPhi;
                 float_T cosPhi;
                 pmacc::math::sincos(phiT, sinPhi, cosPhi);
-                float_T const sinPhi2 = math::sin(phiT / float_T(2.0));
                 float_T const cosPhi2 = math::cos(phiT / float_T(2.0));
                 float_T const tanPhi2 = math::tan(phiT / float_T(2.0));
                 float_T const sinPhi_2 = sinPhi * sinPhi;
-                float_T const cosPhi_2 = cosPhi * cosPhi;
                 float_T const sinPolAngle = math::sin(polAngle);
                 float_T const cosPolAngle = math::cos(polAngle);
-                float_T const sin2Phi = math::sin(float_T(2.0) * phiT);
-                float_T const cos2Phi = math::cos(float_T(2.0) * phiT);
-                float_T const cos3Phi = math::cos(float_T(3.0) * phiT);
 
+                complex_T I = complex_T(0, 1);
                 float_T const x2 = x * x;
-                float_T const z2 = z * z;
-                float_T const rho2 = x2 + z2;
                 float_T const tauG2 = tauG * tauG;
-                float_T const cspeed2 = cspeed * cspeed;
-                float_T const omega02 = omega0 * omega0;
                 float_T const psi0 = float_T(2.0) / k;
                 float_T const w02 = w0 * w0;
-                float_T const w04 = w02 * w02;
-                float_T const kRho0 = omega0 / cspeed * sinPhi;
-                float_T const kxRhoR0 = (k * k * sinPhi * w02) / float_T(2.0);
-                complex_T const zHelp = (-z - (complex_T(0, 1) * k * w02) / float_T(2.0));
-                complex_T const rhoP02 = x2 + zHelp * zHelp;
-                complex_T const rhoP0 = math::sqrt(rhoP02);
-                complex_T const rhoP03 = rhoP02 * rhoP0;
 
-                float_T const besselI0const = pmacc::math::bessel::i0(kxRhoR0);
-                complex_T const besselJ0const = pmacc::math::bessel::j0(rhoP0 * kRho0);
-                complex_T const besselJ1const = pmacc::math::bessel::j1(rhoP0 * kRho0);
+                complex_T const nu = (y * cosPhi - z * sinPhi) / cspeed;
+                complex_T const xi = (-z * cosPhi - y * sinPhi) * tanPhi2 / cspeed;
+                complex_T const rhom
+                    = math::sqrt(x2 + pmacc::math::cPow(-z - complex_T(0, 0.5) * k * w02, static_cast<uint32_t>(2u)));
+                complex_T const rhom2 = rhom * rhom;
+                complex_T const Xm = -z - complex_T(0, 0.5) * k * w02;
+                complex_T const Xm2 = Xm * Xm;
+                float_T const besselI0const = pmacc::math::bessel::i0(k * k * sinPhi * w02 / float_T(2.0));
+                complex_T const besselJ0const = pmacc::math::bessel::j0(k * rhom * sinPhi);
+                complex_T const besselJ1const = pmacc::math::bessel::j1(k * rhom * sinPhi);
 
-                /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
-                 * thus help with formal code verification through manual code inspection.
-                 */
-                float_T const helpVar0 = (cspeed * t - y * cosPhi + z * sinPhi);
-                complex_T const helpVar1 = float_T(2.0)
-                    * pmacc::math::cPow((cspeed * t - y) * cosPhi2 + z * sinPhi2, static_cast<uint32_t>(2u))
-                    / (cspeed * omega0 * tauG2 + cspeed * omega0 * tauG2 * cosPhi + complex_T(0, 2) * z * tanPhi2);
-                complex_T const helpVar2 = math::sqrt(
-                    (float_T(4.0) * cspeed2 * rho2 + complex_T(0, 4) * cspeed * omega0 * z * w02 - omega02 * w04)
-                    / (omega0 + omega0 * cosPhi));
-                complex_T const helpVar3 = math::exp(
-                    (omega0 * (complex_T(0, 1) * z * sinPhi - complex_T(0, 1) * helpVar0 + helpVar1)) / cspeed);
-                complex_T const helpVar4 = math::sqrt(
-                    float_T(4.0) * cspeed2 * rho2 + complex_T(0, 4) * cspeed * omega0 * z * w02 - omega02 * w04);
-                complex_T const helpVar5 = besselI0const * helpVar2
-                    * math::sqrt(omega0 * tauG2 + omega0 * tauG2 * cosPhi + (complex_T(0, 2) * z * tanPhi2) / cspeed);
+                complex_T const zeroOrder = tauG * math::sqrt(omega0 * (float_T(1.0) + cosPhi))
+                    / (math::sqrt(float_T(2.0))
+                       * math::exp(
+                           omega0 * pmacc::math::cPow((t - nu + xi) * cosPhi2, static_cast<uint32_t>(2u))
+                           / (+(omega0 * tauG2) / float_T(2.0) - complex_T(0, 1) * nu
+                              + ((omega0 * tauG2) / float_T(2.0) + complex_T(0, 1) * (nu - xi)) * cosPhi))
+                       * math::sqrt(
+                           +(omega0 * tauG2) / float_T(2.0) - I * nu
+                           + ((omega0 * tauG2) / float_T(2.0) + I * (nu - xi)) * cosPhi));
 
                 complex_T const result
-                    = (tauG
-                       * (complex_T(0, 0.5) * omega02 * cosPhi
-                              * (omega0 * rhoP0 * besselJ0const
-                                     * (float_T(2.0) * cosPolAngle * cosPhi_2
-                                        - (float_T(-3.0) + cos2Phi) * sinPolAngle)
-                                 + float_T(2.0) * cspeed * besselJ1const * (cosPolAngle - sinPolAngle) * sinPhi)
-                              * w04 * helpVar4
-                          + cspeed2
-                              * (complex_T(0, -1) * omega0 * besselJ0const
-                                     * (cosPolAngle
-                                            * ((float_T(4.0) * x2 * rhoP0 + float_T(3.0) * z2 * rhoP0
-                                                + float_T(4.0) * rhoP03)
-                                                   * cosPhi
-                                               + z * rhoP0
-                                                   * (float_T(2.0) * x - float_T(2.0) * x * cos2Phi + z * cos3Phi))
-                                        + ((float_T(4.0) * x2 * rhoP0 + float_T(5.0) * z2 * rhoP0
-                                            - float_T(4.0) * rhoP03)
-                                               * cosPhi
-                                           - z * rhoP0
-                                               * (-float_T(2.0) * x + float_T(2.0) * x * cos2Phi + z * cos3Phi))
-                                            * sinPolAngle)
-                                     * helpVar4
-                                 + float_T(4.0) * cspeed * besselJ1const * sinPhi
-                                     * (cosPolAngle
-                                            * (float_T(2.0) * omega0 * rhoP03 * (x - z * cosPhi) * sinPhi
-                                               - complex_T(0, 1) * (-2 * x * z + (-x2 + z2) * cosPhi) * helpVar4)
-                                        + sinPolAngle
-                                            * (-float_T(2.0) * omega0 * x * rhoP03 * sinPhi
-                                               + omega0 * z * rhoP03 * sin2Phi
-                                               + complex_T(0, 1) * (float_T(2.0) * x * z + (-x2 + z2) * cosPhi)
-                                                   * helpVar4)))
-                          + float_T(2.0) * cspeed * omega0 * w02
-                              * (omega0 * rhoP0 * besselJ0const
-                                     * (cosPolAngle * (float_T(2.0) * z * cosPhi_2 * cosPhi + x * sinPhi_2)
-                                        + sinPolAngle
-                                            * (x * sinPhi_2 + float_T(2.0) * z * cosPhi * (float_T(1.0) + sinPhi_2)))
-                                     * helpVar4
-                                 + cspeed * besselJ1const * sinPhi
-                                     * (cosPolAngle
-                                            * (complex_T(0, -1) * omega0 * rhoP03 * sin2Phi
-                                               + float_T(2.0) * (-x + z * cosPhi) * helpVar4)
-                                        - float_T(2.0) * sinPolAngle
-                                            * (x * helpVar4
-                                               + cosPhi
-                                                   * (complex_T(0, -1) * omega0 * rhoP03 * sinPhi + z * helpVar4)))))
+                    = (complex_T(0, -0.25) * math::exp(I * (omega0 * t - k * y * cosPhi)) * zeroOrder
+                       * (besselJ1const * sinPhi
+                              * (sinPolAngle
+                                     * (x * (float_T(2.0) * Xm - I * k * rhom2 * sinPhi)
+                                        + cosPhi * (rhom2 - float_T(2.0) * Xm2 - I * k * rhom2 * Xm * sinPhi))
+                                 + cosPolAngle
+                                     * (x * (float_T(2.0) * Xm + I * k * rhom2 * sinPhi)
+                                        + cosPhi * (-rhom2 + float_T(2.0) * Xm2 + I * k * rhom2 * Xm * sinPhi)))
+                          + k * rhom * besselJ0const
+                              * (Xm * (-x + Xm * cosPhi) * sinPolAngle * sinPhi_2
+                                 - cosPolAngle
+                                     * (x * Xm * sinPhi_2 + cosPhi * (float_T(-2.0) * rhom2 + Xm2 * sinPhi_2))))
                        * psi0)
-                    / (float_T(16.0) * cspeed2 * cspeed2 * helpVar3 * rhoP03 * helpVar5);
+                    / (cspeed * rhom * rhom2 * besselI0const);
 
                 /* A 180deg-rotation of the field vector around the y-axis
                  * leads to a sign flip in the x- and z- components, respectively.
@@ -587,11 +525,10 @@ namespace picongpu
                 if(math::abs(y - z * math::tan(phiT / float_T(2.0)) - (cspeed * t)) > (numSigmas * tauG * cspeed))
                     return float_T(0.0);
 
-                /* Shortcuts for speeding up the field calculation. */
+                /* Calculating shortcuts for speeding up field calculation */
                 float_T sinPhi;
                 float_T cosPhi;
                 pmacc::math::sincos(phiT, sinPhi, cosPhi);
-                float_T const sinPhi2 = math::sin(phiT / float_T(2.0));
                 float_T const cosPhi2 = math::cos(phiT / float_T(2.0));
                 float_T const tanPhi2 = math::tan(phiT / float_T(2.0));
                 float_T const sinPhi_2 = sinPhi * sinPhi;
@@ -599,84 +536,48 @@ namespace picongpu
                 float_T const sinPolAngle = math::sin(polAngle);
                 float_T const cosPolAngle = math::cos(polAngle);
                 float_T const sin2Phi = math::sin(float_T(2.0) * phiT);
-                float_T const cos2Phi = math::cos(float_T(2.0) * phiT);
-                float_T const cos3Phi = math::cos(float_T(3.0) * phiT);
 
+                complex_T I = complex_T(0, 1);
                 float_T const x2 = x * x;
-                float_T const z2 = z * z;
-                float_T const rho2 = x2 + z2;
                 float_T const tauG2 = tauG * tauG;
-                float_T const cspeed2 = cspeed * cspeed;
-                float_T const omega02 = omega0 * omega0;
                 float_T const psi0 = float_T(2.0) / k;
                 float_T const w02 = w0 * w0;
-                float_T const w04 = w02 * w02;
-                float_T const kRho0 = omega0 / cspeed * sinPhi;
-                float_T const kxRhoR0 = (k * k * sinPhi * w02) / float_T(2.0);
-                complex_T const zHelp = (-z - (complex_T(0, 1) * k * w02) / float_T(2.0));
-                complex_T const rhoP02 = x2 + zHelp * zHelp;
-                complex_T const rhoP0 = math::sqrt(rhoP02);
-                complex_T const rhoP03 = rhoP02 * rhoP0;
 
-                float_T const besselI0const = pmacc::math::bessel::i0(kxRhoR0);
-                complex_T const besselJ0const = pmacc::math::bessel::j0(rhoP0 * kRho0);
-                complex_T const besselJ1const = pmacc::math::bessel::j1(rhoP0 * kRho0);
+                complex_T const nu = (y * cosPhi - z * sinPhi) / cspeed;
+                complex_T const xi = (-z * cosPhi - y * sinPhi) * tanPhi2 / cspeed;
+                complex_T const rhom
+                    = math::sqrt(x2 + pmacc::math::cPow(-z - complex_T(0, 0.5) * k * w02, static_cast<uint32_t>(2u)));
+                complex_T const rhom2 = rhom * rhom;
+                complex_T const Xm = -z - complex_T(0, 0.5) * k * w02;
+                float_T const besselI0const = pmacc::math::bessel::i0(k * k * sinPhi * w02 / float_T(2.0));
+                complex_T const besselJ0const = pmacc::math::bessel::j0(k * rhom * sinPhi);
+                complex_T const besselJ1const = pmacc::math::bessel::j1(k * rhom * sinPhi);
 
-                /* The "helpVar" variables decrease the nesting level of the evaluated expressions and
-                 * thus help with formal code verification through manual code inspection.
-                 */
-                float_T const helpVar0 = (cspeed * t - y * cosPhi + z * sinPhi);
-                complex_T const helpVar1 = float_T(2.0)
-                    * pmacc::math::cPow((cspeed * t - y) * cosPhi2 + z * sinPhi2, static_cast<uint32_t>(2u))
-                    / (cspeed * omega0 * tauG2 + cspeed * omega0 * tauG2 * cosPhi + complex_T(0, 2) * z * tanPhi2);
-                complex_T const helpVar2 = math::sqrt(
-                    (float_T(4.0) * cspeed2 * rho2 + complex_T(0, 4) * cspeed * omega0 * z * w02 - omega02 * w04)
-                    / (omega0 + omega0 * cosPhi));
-                complex_T const helpVar3 = math::exp(
-                    (omega0 * (complex_T(0, 1) * z * sinPhi - complex_T(0, 1) * helpVar0 + helpVar1)) / cspeed);
-                complex_T const helpVar4 = math::sqrt(
-                    float_T(4.0) * cspeed2 * rho2 + complex_T(0, 4) * cspeed * omega0 * z * w02 - omega02 * w04);
-                complex_T const helpVar5 = besselI0const * helpVar2
-                    * math::sqrt(omega0 * tauG2 + omega0 * tauG2 * cosPhi + (complex_T(0, 2) * z * tanPhi2) / cspeed);
+                complex_T const zeroOrder = tauG * math::sqrt(omega0 * (float_T(1.0) + cosPhi))
+                    / (math::sqrt(float_T(2.0))
+                       * math::exp(
+                           omega0 * pmacc::math::cPow((t - nu + xi) * cosPhi2, static_cast<uint32_t>(2u))
+                           / (+(omega0 * tauG2) / float_T(2.0) - complex_T(0, 1) * nu
+                              + ((omega0 * tauG2) / float_T(2.0) + complex_T(0, 1) * (nu - xi)) * cosPhi))
+                       * math::sqrt(
+                           +(omega0 * tauG2) / float_T(2.0) - I * nu
+                           + ((omega0 * tauG2) / float_T(2.0) + I * (nu - xi)) * cosPhi));
 
                 complex_T const result
-                    = (tauG
-                       * (complex_T(0, 1) * omega02
-                              * (omega0 * rhoP0 * besselJ0const * cosPhi_2 * (cosPolAngle - sinPolAngle)
-                                 + cspeed * besselJ1const * (cosPolAngle + sinPolAngle) * sinPhi)
-                              * w04 * helpVar4
-                          + cspeed * omega0 * w02
-                              * (omega0 * rhoP0 * besselJ0const * cosPhi * (cosPolAngle - sinPolAngle)
-                                     * (float_T(4.0) * z * cosPhi - float_T(2.0) * x * sinPhi_2) * helpVar4
-                                 + float_T(4.0) * cspeed * besselJ1const * sinPhi
-                                     * (sinPolAngle
-                                            * (complex_T(0, 1) * omega0 * rhoP03 * sinPhi
-                                               + (z - x * cosPhi) * helpVar4)
-                                        + cosPolAngle
-                                            * (complex_T(0, -1) * omega0 * rhoP03 * sinPhi
-                                               + (z + x * cosPhi) * helpVar4)))
-                          + cspeed2
-                              * (complex_T(0, -1) * omega0 * rhoP0 * besselJ0const
-                                     * (cosPolAngle
-                                            * (float_T(4.0) * x2 + float_T(2.0) * z2 - float_T(4.0) * rhoP02
-                                               - x * z * cosPhi + float_T(2.0) * z2 * cos2Phi + x * z * cos3Phi)
-                                        - (float_T(2.0) * z2 + float_T(4.0) * rhoP02 - x * z * cosPhi
-                                           + float_T(2.0) * (float_T(2.0) * x2 + z2) * cos2Phi + x * z * cos3Phi)
-                                            * sinPolAngle)
-                                     * helpVar4
-                                 + float_T(4.0) * cspeed * besselJ1const * sinPhi
-                                     * (sinPolAngle
-                                            * (float_T(2.0) * omega0 * z * rhoP03 * sinPhi
-                                               + omega0 * x * rhoP03 * sin2Phi
-                                               - complex_T(0, 1) * (-x2 + z2 - float_T(2.0) * x * z * cosPhi)
-                                                   * helpVar4)
-                                        - cosPolAngle
-                                            * (float_T(2.0) * omega0 * z * rhoP03 * sinPhi
-                                               + omega0 * x * rhoP03 * sin2Phi
-                                               + complex_T(0, 1) * (-x2 + z2 + float_T(2.0) * x * z * cosPhi)
-                                                   * helpVar4))))
+                    = (complex_T(0, -0.25) * math::exp(I * (omega0 * t - k * y * cosPhi)) * zeroOrder
+                       * (k * rhom * besselJ0const
+                              * (cosPolAngle * (-rhom2 + x2 + x * Xm * cosPhi) * sinPhi_2
+                                 - sinPolAngle
+                                     * (rhom2 + rhom2 * cosPhi_2 - x2 * sinPhi_2 + x * Xm * cosPhi * sinPhi_2))
+                          + besselJ1const
+                              * (cosPolAngle * sinPhi
+                                     * (rhom2 - float_T(2.0) * x2 + I * k * rhom2 * Xm * sinPhi
+                                        + x * cosPhi * (float_T(-2.0) * Xm - I * k * rhom2 * sinPhi))
+                                 + sinPolAngle
+                                     * ((rhom2 - float_T(2.0) * x2) * sinPhi
+                                        + I * k * rhom2 * (-Xm + x * cosPhi) * sinPhi_2 + x * Xm * sin2Phi)))
                        * psi0)
-                    / (float_T(16.0) * cspeed2 * cspeed2 * helpVar3 * rhoP03 * helpVar5);
+                    / (cspeed * rhom * rhom2 * besselI0const);
 
                 /* A 180deg-rotation of the field vector around the y-axis
                  * leads to a sign flip in the x- and z- components, respectively.
