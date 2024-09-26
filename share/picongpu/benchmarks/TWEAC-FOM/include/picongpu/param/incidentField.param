@@ -138,7 +138,7 @@ namespace picongpu
                           Params::BETA_0,
                           Params::TDELAY,
                           Params::AUTO_TDELAY,
-                          Params::Polarization)
+                          -Params::Polarization)
                 {
                 }
 
@@ -223,7 +223,7 @@ namespace picongpu
                           Params::BETA_0,
                           Params::TDELAY,
                           Params::AUTO_TDELAY,
-                          Params::Polarization)
+                          -Params::Polarization)
                 {
                 }
 

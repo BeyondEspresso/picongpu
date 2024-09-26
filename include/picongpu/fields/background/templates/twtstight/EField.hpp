@@ -9,7 +9,7 @@
  *
  * PIConGPU is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -77,7 +77,7 @@ namespace picongpu
                  */
                 PMACC_ALIGN(auto_tdelay, bool const);
                 /** Polarization of TWTS laser with respect to x-axis around propagation direction [rad, default = 0. *
-                 * (PI/180.) ] */
+                 * (PI/180.)] */
                 PMACC_ALIGN(polAngle, float_X const);
 
                 /** Electric field of the TWTS laser
@@ -89,14 +89,14 @@ namespace picongpu
                  * @param w_x beam waist: distance from the axis where the pulse electric field
                  *  decreases to its 1/e^2-th part at the focus position of the laser [m]
                  * @param phi interaction angle between TWTS laser propagation vector and
-                 *  the y-axis [rad, default = 90. * (PI/180.) ]
+                 *  the y-axis [rad, default = 90. * (PI/180.)]
                  * @param beta_0 propagation speed of overlap normalized to
                  *  the speed of light [c, default = 1.0]
                  * @param tdelay_user manual time delay if auto_tdelay is false
                  * @param auto_tdelay calculate the time delay such that the TWTS pulse is not
                  *  inside the simulation volume at simulation start timestep = 0 [default = true]
                  * @param polAngle determines the TWTS laser polarization angle with respect to x-axis around
-                 * propagation direction [rad, default = 0. * (PI/180.) ] Normal to laser pulse front tilt plane:
+                 * propagation direction [rad, default = 0. * (PI/180.)] Normal to laser pulse front tilt plane:
                  * polAngle = 0.0 * (PI/180.) (linear polarization parallel to x-axis) Parallel to laser pulse front
                  * tilt plane: polAngle = 90.0 * (PI/180.) (linear polarization parallel to yz-plane)
                  */
@@ -123,9 +123,11 @@ namespace picongpu
                  */
 
                 //! Integer index version, adds in-cell shifts according to the grid used; t = currentStep * dt
+                //! This interface is used by the fieldBackground approach for implementing fields.
                 HDINLINE float3_X operator()(DataSpace<simDim> const& cellIdx, uint32_t const currentStep) const;
 
                 //! Floating-point index version, uses fractional cell index as provided; t = currentStep * dt
+                //! This interface is used by the incidentField approach for implementing fields.
                 HDINLINE float3_X operator()(floatD_X const& cellIdx, float_X const currentStep) const;
 
                 /** @} */
@@ -155,28 +157,28 @@ namespace picongpu
                     pmacc::math::Vector<floatD_X, detail::numComponents> const& extraShifts,
                     float_X const currentStep) const;
 
-                /** Calculate the Ex(r,t) field here (electric field vector normal to pulse-front-tilt plane)
+                /** Calculate the Ex(r,t) field
                  *
                  * @param pos Spatial position of the target field
                  * @param time Absolute time (SI, including all offsets and transformations)
                  *  for calculating the field
-                 * @return Ex-field component of the non-rotated TWTS field in SI units */
+                 * @return Ex-field component of the TWTS field in SI units */
                 HDINLINE float_T calcTWTSEx(float3_64 const& pos, float_64 const time) const;
 
-                /** Calculate the Ey(r,t) field here (electric field vector in pulse-front-tilt plane)
+                /** Calculate the Ey(r,t) field
                  *
                  * @param pos Spatial position of the target field
                  * @param time Absolute time (SI, including all offsets and transformations)
                  *  for calculating the field
-                 * @return Ex-field component of the non-rotated TWTS field in SI units */
+                 * @return Ey-field component of the TWTS field in SI units */
                 HDINLINE float_T calcTWTSEy(float3_64 const& pos, float_64 const time) const;
 
-                /** Calculate the Ez(r,t) field, when electric field vector (Ex,0,0)
-                 *  is normal to the pulse-front-tilt plane (y,z)
+                /** Calculate the Ez(r,t) field
                  *
                  * @param pos Spatial position of the target field.
                  * @param time Absolute time (SI, including all offsets and transformations)
-                 *  for calculating the field */
+                 *  for calculating the field
+                 * @return Ez-field component of the TWTS field in SI units */
                 HDINLINE float_T calcTWTSEz(float3_64 const& pos, float_64 const time) const;
 
                 /** Calculate the E-field vector of the TWTS laser in SI units.

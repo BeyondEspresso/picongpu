@@ -9,7 +9,7 @@
  *
  * PIConGPU is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -33,12 +33,6 @@
 #include <pmacc/math/Complex.hpp>
 #include <pmacc/math/Vector.hpp>
 #include <pmacc/types.hpp>
-
-#include <iomanip>
-#include <iostream>
-#include <limits>
-
-#include <stdio.h>
 
 namespace picongpu
 {
@@ -197,7 +191,7 @@ namespace picongpu
                     }
 
                     // we should never be here
-                    return 0.0_X;
+                    return NAN;
                 }
                 if constexpr(simDim != DIM3)
                     return (*this)(cellIdx, currentStep)[T_component];
@@ -271,6 +265,9 @@ namespace picongpu
                 auto const y = float_T(yMod / sim.unit.length());
                 auto const z = float_T(phiPositive * pos.z() / sim.unit.length());
                 auto const t = float_T(timeMod / sim.unit.time());
+                /* To avoid underflows in computation, fields are set to zero
+                 * before and after the respective TWTS pulse envelope.
+                 */
                 if(math::abs(y - z * math::tan(phiT / float_T(2.0)) - (cspeed * t)) > (numSigmas * tauG * cspeed))
                     return float_T(0.0);
 
@@ -441,6 +438,9 @@ namespace picongpu
                 auto const y = float_T(yMod / sim.unit.length());
                 auto const z = float_T(phiPositive * pos.z() / sim.unit.length());
                 auto const t = float_T(timeMod / sim.unit.time());
+                /* To avoid underflows in computation, fields are set to zero
+                 * before and after the respective TWTS pulse envelope.
+                 */
                 if(math::abs(y - z * math::tan(phiT / float_T(2.0)) - (cspeed * t)) > (numSigmas * tauG * cspeed))
                     return float_T(0.0);
 
@@ -574,6 +574,9 @@ namespace picongpu
                 auto const y = float_T(yMod / sim.unit.length());
                 auto const z = float_T(phiPositive * pos.z() / sim.unit.length());
                 auto const t = float_T(timeMod / sim.unit.time());
+                /* To avoid underflows in computation, fields are set to zero
+                 * before and after the respective TWTS pulse envelope.
+                 */
                 if(math::abs(y - z * math::tan(phiT / float_T(2.0)) - (cspeed * t)) > (numSigmas * tauG * cspeed))
                     return float_T(0.0);
 

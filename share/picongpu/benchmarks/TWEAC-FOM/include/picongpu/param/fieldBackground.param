@@ -72,7 +72,7 @@ namespace picongpu
                   Params::BETA_0,
                   Params::TDELAY,
                   Params::AUTO_TDELAY,
-                  Params::Polarization)
+                  -Params::Polarization)
         {
         }
 
@@ -87,7 +87,7 @@ namespace picongpu
             /** unit: Volt /meter */
             float3_64 const invUnitField = float3_64(1.0 / m_unitField[0], 1.0 / m_unitField[1], 1.0 / m_unitField[2]);
 
-            /* laser amplitude in picongpu units [ unit: (Volt /meter) / unitField-factor ]
+            /* laser amplitude in picongpu units [ unit: (Volt/meter) / unitField-factor ]
              * Note: the laser amplitude is included in all field components
              * polarization and other properties are established by the peak amplitude
              * normalized twtsFieldE(...) */
@@ -132,7 +132,7 @@ namespace picongpu
                   Params::BETA_0,
                   Params::TDELAY,
                   Params::AUTO_TDELAY,
-                  Params::Polarization)
+                  -Params::Polarization)
         {
         }
 
@@ -147,7 +147,7 @@ namespace picongpu
             /** unit: Volt /meter */
             float3_64 const invUnitField = float3_64(1.0 / m_unitField[0], 1.0 / m_unitField[1], 1.0 / m_unitField[2]);
 
-            /* laser amplitude in picongpu units [ unit: (Volt /meter) / unitField-factor ]
+            /* laser amplitude in picongpu units [ unit: (Volt/meter) / unitField-factor ]
              * Note: the laser amplitude is included in all field components
              * polarization and other properties are established by the peak amplitude
              * normalized twtsFieldB(...) */

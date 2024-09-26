@@ -1,4 +1,4 @@
-/* Copyright 2014-2023 Alexander Debus
+/* Copyright 2014-2024 Alexander Debus
  *
  * This file is part of PIConGPU.
  *
@@ -9,7 +9,7 @@
  *
  * PIConGPU is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -22,9 +22,10 @@
  * This background field implements a obliquely incident, cylindrically-focused, pulse-front tilted laser for some
  * incidence angle phi as used for [1].
  *
- * The TWTS implementation generally follows the definition of eq. (7) in [1].
+ * The TWTS implementation is based on the definition of eq. (7) in [1]. Additionally, techniques from [2] and [3]
+ * are used to allow for strictly Maxwell-conform solutions for tight foci wx or small incident angles phi.
  *
- * Specifically, this TWTStight approximation assumes a special case, where the transverse extent (but not its height
+ * Specifically, this TWTStight implementation assumes a special case, where the transverse extent (but not its height
  * wx or its pulse duration) of the TWTS-laser wy is assumed to be infinite. While this special case of the TWTS laser
  * applies to a large range of use cases, the resulting form allows to use different spatial and time coordinates
  * (timeMod, yMod and zMod), which allow long term numerical stability beyond 100000 timesteps at single precision,
@@ -45,6 +46,12 @@
  * [1] Steiniger et al., "Optical free-electron lasers with Traveling-Wave Thomson-Scattering",
  *     Journal of Physics B: Atomic, Molecular and Optical Physics, Volume 47, Number 23 (2014),
  *     https://doi.org/10.1088/0953-4075/47/23/234011
+ * [2] Mitri, F. G., "Cylindrical quasi-Gaussian beams", Opt. Lett., 38(22), pp. 4727-4730 (2013),
+ *     https://doi.org/10.1364/OL.38.004727
+ * [3] Hua, J. F., "High-order corrected fields of ultrashort, tightly focused laser pulses",
+ *     Appl. Phys. Lett. 85, 3705-3707 (2004),
+ *     https://doi.org/10.1063/1.1811384
+ *
  */
 
 #pragma once
@@ -58,6 +65,12 @@ namespace picongpu
     {
         namespace twtstight
         {
+            /** To avoid underflows in computation, numsigmas controls where a zero cutoff is made.
+             *  The fields thus are set to zero at a position (numSigmas * tauG * cspeed) ahead
+             *  and behind the respective TWTS pulse envelope.
+             *  Developer note: In case the float_T-type is set to float_X instead of float_64,
+             *  numSigma needs to be adjusted to numSigmas = 6 to avoid numerical issues.
+             */
             constexpr uint32_t numSigmas = 10;
         } // namespace twtstight
     } // namespace templates

@@ -1,4 +1,4 @@
-/* Copyright 2014-2022 Alexander Debus
+/* Copyright 2014-2024 Alexander Debus
  *
  * This file is part of PIConGPU.
  *
@@ -9,7 +9,7 @@
  *
  * PIConGPU is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -80,8 +80,8 @@ namespace picongpu
                         /* halfSimSize[2] --> Half-depth of simulation volume (in z); By geometric
                          * projection we calculate the y-distance walkoff of the TWTS-pulse.
                          * The abs( )-function is for correct offset for -phi<-90Deg and +phi>+90Deg. */
-                        float_64 const y1
-                            = float_64(halfSimSize[2] * picongpu::SI::CELL_DEPTH_SI) * math::abs(math::cos(eta));
+                        float_64 const y1 = float_64(halfSimSize[2] * picongpu::sim.si.getCellSize().z())
+                            * math::abs(math::cos(eta));
                         /* Fudge parameter to make sure, that TWTS pulse starts to impact simulation volume
                          * at low intensity values. */
                         float_64 const m = 3.;
