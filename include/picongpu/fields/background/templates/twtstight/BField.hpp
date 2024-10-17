@@ -38,7 +38,7 @@ namespace picongpu
             class BField
             {
             public:
-                using float_T = float_64;
+                using float_T = float_X;
 
                 /** Center of simulation volume in number of cells */
                 PMACC_ALIGN(halfSimSize, DataSpace<simDim>);

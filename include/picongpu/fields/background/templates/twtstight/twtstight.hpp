@@ -68,10 +68,10 @@ namespace picongpu
             /** To avoid underflows in computation, numsigmas controls where a zero cutoff is made.
              *  The fields thus are set to zero at a position (numSigmas * tauG * cspeed) ahead
              *  and behind the respective TWTS pulse envelope.
-             *  Developer note: In case the float_T-type is set to float_X instead of float_64,
-             *  numSigma needs to be adjusted to numSigmas = 6 to avoid numerical issues.
+             *  Developer note: In case the float_T-type is set to float_64 instead of float_X,
+             *  numSigma can be increased to numSigmas = 10 without running into numerical issues.
              */
-            constexpr uint32_t numSigmas = 10;
+            constexpr uint32_t numSigmas = 6;
         } // namespace twtstight
     } // namespace templates
 } // namespace picongpu

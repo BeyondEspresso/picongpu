@@ -262,11 +262,29 @@ namespace picongpu
             using ZMin = MyProfile;
             using ZMax = MyProfile;
 
-            // These values are chosen to match the background, have to be changed for higher order field solvers
+            /** Position in cells of the Huygens surface relative to start of the total domain
+             *
+             * The position is set as an offset, in cells, counted from the start of the total domain.
+             * For the max boundaries, negative position values are allowed.
+             * These negative values are treated as position at (global_domain_size[d] + POSITION[d][1]).
+             * It is also possible to specify the position explicitly as a positive number.
+             * Then it is on a user to make sure the position is correctly calculated wrt the grid size.
+             *
+             * Except moving window simulations, the position must be inside the global domain.
+             * The distance between the Huygens surface and each global domain boundary must be at least
+             * absorber_thickness + (FDTD_spatial_order / 2 - 1). However beware of setting position = direction *
+             * (absorber_thickness + const), as then changing absorber parameters will affect laser positioning.
+             * When all used profiles are None, the check for POSITION validity is skipped.
+             *
+             * For moving window simulations, POSITION for the YMax side can be located outside the initially
+             * simulated volume. In this case, parts of the generation surface outside of the currently simulated
+             * volume is are treated as if they had zero incident field and it is user's responsibility to apply a
+             * source matching such a case.
+             */
             constexpr int32_t POSITION[3][2] = {
-                {1, -1}, // x direction [negative, positive]
-                {1, -1}, // y direction [negative, positive]
-                {1, -1} // z direction [negative, positive]
+                {16, -16}, // x direction [negative, positive]
+                {16, -16}, // y direction [negative, positive]
+                {16, -16} // z direction [negative, positive]
             };
 
         } // namespace incidentField
