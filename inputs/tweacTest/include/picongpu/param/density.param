@@ -1,0 +1,123 @@
+/* Copyright 2013-2023 Axel Huebl, Heiko Burau, Rene Widera, Felix Schmitt,
+ *                     Richard Pausch
+ *
+ * This file is part of PIConGPU.
+ *
+ * PIConGPU is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * PIConGPU is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with PIConGPU.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/** @file
+ *
+ * Configure existing or define new normalized density profiles here.
+ * During particle species creation in speciesInitialization.param,
+ * those profiles can be translated to spatial particle distributions.
+ */
+
+#pragma once
+
+#include "picongpu/particles/densityProfiles/profiles.def"
+
+
+namespace picongpu
+{
+    namespace densityProfiles
+    {
+        /* definition of homogenous profile */
+        using Homogenous = HomogenousImpl;
+
+
+        struct FreeFormulaFunctor
+        {
+            /** This formula uses SI quantities only.
+             *  The profile will be multiplied by BASE_DENSITY_SI.
+             *
+             * @param position_SI total offset including all slides [meter]
+             * @param cellSize_SI cell sizes [meter]
+             *
+             * @return float_X density [normalized to 1.0]
+             */
+            HDINLINE float_X operator()(const floatD_64& position_SI, const float3_64& cellSize_SI)
+            {
+                const float_64 x = precisionCast<float_64>(position_SI.x());
+                const float_64 y = precisionCast<float_64>(position_SI.y());
+                const float_64 z = precisionCast<float_64>(position_SI.z());
+
+                constexpr double VACUUM_X_SI = 16.0 * picongpu::SI::CELL_WIDTH_SI;
+                constexpr double VACUUM_Y_SI = 7200.0 * picongpu::SI::CELL_HEIGHT_SI;
+                constexpr double VACUUM_Z_SI = 16.0 * picongpu::SI::CELL_DEPTH_SI;
+
+                constexpr double SIM_BOX_X = 1920 * picongpu::SI::CELL_WIDTH_SI;
+                constexpr double SIM_BOX_Z = 7680 * picongpu::SI::CELL_DEPTH_SI;
+
+                constexpr double PLASMA_LAMBDA = 47.2e-6;
+                constexpr double N_LAMBDA = 4;
+
+                constexpr double X_RAMP_LENGTH = PLASMA_LAMBDA / 4.0;
+                constexpr double X_PLAT_START = X_RAMP_LENGTH + VACUUM_X_SI;
+                constexpr double X_PLAT_END = SIM_BOX_X - X_PLAT_START;
+                constexpr double X_SIGMA = X_RAMP_LENGTH / N_LAMBDA;
+
+                constexpr double Z_PLAT_START = PLASMA_LAMBDA + VACUUM_Z_SI;
+                constexpr double Z_PLAT_END = SIM_BOX_Z - Z_PLAT_START;
+                constexpr double Z_SIGMA = PLASMA_LAMBDA / N_LAMBDA;
+
+                // Set initial upramp large compared to plasma oscillation length
+                constexpr double INITIAL_UPRAMP_SI = 100.0e-6;
+
+                float_X temp = float_X(1.0);
+
+                // Ensure vacuum are at boundaries in z direction
+                if(y < VACUUM_Y_SI)
+                    return float_X(0.0);
+
+                if(x < VACUUM_X_SI || x > (X_PLAT_END + X_RAMP_LENGTH))
+                    return float_X(0.0);
+                else if(x < X_PLAT_START)
+                {
+                    const float_X exponent = math::abs((x - X_PLAT_START) / X_SIGMA);
+                    temp *= math::exp(-0.5 * exponent * exponent);
+                }
+                else if(x > X_PLAT_END)
+                {
+                    const float_X exponent = math::abs((x - X_PLAT_END) / X_SIGMA);
+                    temp *= math::exp(-0.5 * exponent * exponent);
+                }
+
+                if(z < VACUUM_Z_SI || z > (Z_PLAT_END + PLASMA_LAMBDA))
+                    return float_X(0.0);
+                else if(z < Z_PLAT_START)
+                {
+                    const float_X exponent = math::abs((z - Z_PLAT_START) / Z_SIGMA);
+                    temp *= math::exp(-0.5 * exponent * exponent);
+                }
+                else if(z > Z_PLAT_END)
+                {
+                    const float_X exponent = math::abs((z - Z_PLAT_END) / Z_SIGMA);
+                    temp *= math::exp(-0.5 * exponent * exponent);
+                }
+
+                // Initial upramp
+                if(y >= (VACUUM_Y_SI) && y < (VACUUM_Y_SI + INITIAL_UPRAMP_SI))
+                    return temp * float_X((y - VACUUM_Y_SI) / INITIAL_UPRAMP_SI);
+
+
+                return float_X(temp);
+            }
+        };
+
+        /* definition of free formula profile */
+        using FreeFormula = FreeFormulaImpl<FreeFormulaFunctor>;
+    } // namespace densityProfiles
+} // namespace picongpu

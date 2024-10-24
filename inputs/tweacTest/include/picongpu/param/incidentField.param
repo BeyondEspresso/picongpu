@@ -1,0 +1,274 @@
+/* Copyright 2014-2024 Axel Huebl, Alexander Debus, Richard Pausch, Sergei Bastrakov
+ *
+ * This file is part of PIConGPU.
+ *
+ * PIConGPU is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * PIConGPU is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with PIConGPU.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/** @file incidentField.param
+ *
+ * Configure incident field profile and offset of the Huygens surface for each boundary.
+ *
+ * Available profiles:
+ *  - profiles::DispersivePulse<>     : Gaussian pulse allowing to set first-, second-, and third-order dispersion
+ * in focus. That is, SD, AD, GDD, and TOD, respectively.
+ *  - profiles::ExpRampWithPrepulse<> : exponential ramp with prepulse wavepacket with given parameters
+ *  - profiles::Free<>                : custom profile with user-provided functors to calculate incident E and B
+ *  - profiles::GaussianPulse<>       : Pulse with Gaussian profile in all three dimensions with given parameters
+ *  - profiles::None                  : no incident field
+ *  - profiles::PlaneWave<>           : plane wave profile with given parameters
+ *  - profiles::Polynom<>             : wavepacket with a polynomial temporal intensity shape profile with given
+ * parameters
+ *  - profiles::PulseFrontTilt<>      : GaussianPulse with tilted pulse front with given parameters
+ *  - profiles::Wavepacket<>          : wavepacket with Gaussian spatial and temporal envelope profile with given
+ * parameters
+ *
+ * In the end, this file needs to define `XMin`, `XMax`, `YMax`, `YMax`, `ZMin`, `ZMax` (the latter two can be skipped
+ * in 2d) type aliases in namespace `picongpu::fields::incidentField`. Each of them could be a single profile or a
+ * typelist of profiles created with `MakeSeq_t`. In case a typelist is used, the resulting field is a sum of
+ * effects of all profiles in the list. This file also has to define constexpr array `POSITION` that controls
+ * positioning of the generating surface relative to total domain. For example:
+ *
+ * @code{.cpp}
+ * using XMin = profiles::Free<UserFunctorIncidentE>;
+ * using XMax = profiles::None;
+ * using YMin = MakeSeq_t<profiles::PlaneWave<UserPlaneWaveParams>, profiles::Wavepacket<UserWavepacketParams>>;
+ * using YMax = profiles::Free<AnotherUserFunctorIncidentE, AnotherUserFunctorIncidentB>;
+ * using ZMin = profiles::Polynom<UserPolynomParams>;
+ * using ZMax = profiles::GaussianPulse<UserGaussianPulseParams>;
+ *
+ * constexpr int32_t POSITION[3][2] = { {16, -16}, {16, -16}, {16, -16} };
+ * @endcode
+ */
+
+#pragma once
+
+#include "picongpu/fields/background/templates/twtstight/twtstight.hpp"
+#include "picongpu/fields/incidentField/profiles/profiles.def"
+
+/** Load parameters of the TWTS background laser field */
+#include "TwtsBackgroundLaser.param"
+
+#ifndef PARAM_FIELD_BACKGROUND
+#    define PARAM_FIELD_BACKGROUND 0
+#endif
+
+#ifndef PARAM_COMPONENTWISE
+#    define PARAM_COMPONENTWISE 1
+#endif
+
+namespace Params = ::picongpu::fields::background::twtsParam;
+
+namespace picongpu
+{
+    namespace fields
+    {
+        namespace incidentField
+        {
+            class FunctorEpos
+            {
+            public:
+                const float_X m_currentStep;
+                PMACC_ALIGN(m_unitField, const float3_64);
+                const templates::twtstight::EField twtsFieldEpos;
+
+                HINLINE FunctorEpos(float_X const currentStep, const float3_64 unitField)
+                    : m_currentStep(currentStep)
+                    , m_unitField(unitField)
+                    , twtsFieldEpos(
+                          Params::FOCUS_Y_SI,
+                          Params::WAVE_LENGTH_SI,
+                          Params::PULSE_LENGTH_SI,
+                          Params::W0_SI,
+                          Params::PHI,
+                          Params::BETA_0,
+                          Params::TDELAY,
+                          Params::AUTO_TDELAY,
+                          Params::Polarization)
+                {
+                }
+
+                HDINLINE float3_X operator()(const floatD_X& totalCellIdx) const
+                {
+                    float3_64 const invUnitField
+                        = float3_64(1.0 / m_unitField[0], 1.0 / m_unitField[1], 1.0 / m_unitField[2]);
+                    float3_X const amplitude = precisionCast<float_X>(Params::AMPLITUDE_SI * invUnitField);
+                    return amplitude * twtsFieldEpos(totalCellIdx, m_currentStep);
+                }
+
+#if PARAM_COMPONENTWISE
+                template<uint32_t T_component>
+                HDINLINE float_X getComponent(floatD_X const& totalCellIdx) const
+                {
+                    float_64 const invUnitField = 1.0 / m_unitField[T_component];
+                    float_X const amplitude = precisionCast<float_X>(Params::AMPLITUDE_SI * invUnitField);
+                    return amplitude * twtsFieldEpos.getComponent<T_component>(totalCellIdx, m_currentStep);
+                }
+#endif
+            };
+
+            class FunctorEneg
+            {
+            public:
+                const float_X m_currentStep;
+                PMACC_ALIGN(m_unitField, const float3_64);
+                const templates::twtstight::EField twtsFieldEneg;
+
+                HINLINE FunctorEneg(float_X const currentStep, const float3_64 unitField)
+                    : m_currentStep(currentStep)
+                    , m_unitField(unitField)
+                    , twtsFieldEneg(
+                          Params::FOCUS_Y_SI,
+                          Params::WAVE_LENGTH_SI,
+                          Params::PULSE_LENGTH_SI,
+                          Params::W0_SI,
+                          -Params::PHI,
+                          Params::BETA_0,
+                          Params::TDELAY,
+                          Params::AUTO_TDELAY,
+                          -Params::Polarization)
+                {
+                }
+
+                HDINLINE float3_X operator()(const floatD_X& totalCellIdx) const
+                {
+                    float3_64 const invUnitField
+                        = float3_64(1.0 / m_unitField[0], 1.0 / m_unitField[1], 1.0 / m_unitField[2]);
+                    float3_X const amplitude = precisionCast<float_X>(Params::AMPLITUDE_SI * invUnitField);
+                    return amplitude * twtsFieldEneg(totalCellIdx, m_currentStep);
+                }
+
+#if PARAM_COMPONENTWISE
+                template<uint32_t T_component>
+                HDINLINE float_X getComponent(floatD_X const& totalCellIdx) const
+                {
+                    float_64 const invUnitField = 1.0 / m_unitField[T_component];
+                    float_X const amplitude = precisionCast<float_X>(Params::AMPLITUDE_SI * invUnitField);
+                    return amplitude * twtsFieldEneg.getComponent<T_component>(totalCellIdx, m_currentStep);
+                }
+#endif
+            };
+
+            class FunctorBpos
+            {
+            public:
+                const float_X m_currentStep;
+                PMACC_ALIGN(m_unitField, const float3_64);
+                templates::twtstight::BField twtsFieldBpos;
+
+                HINLINE FunctorBpos(const float_X currentStep, const float3_64 unitField)
+                    : m_currentStep(currentStep)
+                    , m_unitField(unitField)
+                    , twtsFieldBpos(
+                          Params::FOCUS_Y_SI,
+                          Params::WAVE_LENGTH_SI,
+                          Params::PULSE_LENGTH_SI,
+                          Params::W0_SI,
+                          Params::PHI,
+                          Params::BETA_0,
+                          Params::TDELAY,
+                          Params::AUTO_TDELAY,
+                          Params::Polarization)
+                {
+                }
+
+                HDINLINE float3_X operator()(const floatD_X& totalCellIdx) const
+                {
+                    float3_64 const invUnitField
+                        = float3_64(1.0 / m_unitField[0], 1.0 / m_unitField[1], 1.0 / m_unitField[2]);
+                    float3_X const amplitude = precisionCast<float_X>(Params::AMPLITUDE_SI * invUnitField);
+                    return amplitude * twtsFieldBpos(totalCellIdx, m_currentStep);
+                }
+
+#if PARAM_COMPONENTWISE
+                template<uint32_t T_component>
+                HDINLINE float_X getComponent(floatD_X const& totalCellIdx) const
+                {
+                    float_64 const invUnitField = 1.0 / m_unitField[T_component];
+                    float_X const amplitude = precisionCast<float_X>(Params::AMPLITUDE_SI * invUnitField);
+                    return amplitude * twtsFieldBpos.getComponent<T_component>(totalCellIdx, m_currentStep);
+                }
+#endif
+            };
+
+            class FunctorBneg
+            {
+            public:
+                const float_X m_currentStep;
+                PMACC_ALIGN(m_unitField, const float3_64);
+                templates::twtstight::BField twtsFieldBneg;
+
+                HINLINE FunctorBneg(const float_X currentStep, const float3_64 unitField)
+                    : m_currentStep(currentStep)
+                    , m_unitField(unitField)
+                    , twtsFieldBneg(
+                          Params::FOCUS_Y_SI,
+                          Params::WAVE_LENGTH_SI,
+                          Params::PULSE_LENGTH_SI,
+                          Params::W0_SI,
+                          -Params::PHI,
+                          Params::BETA_0,
+                          Params::TDELAY,
+                          Params::AUTO_TDELAY,
+                          -Params::Polarization)
+                {
+                }
+
+                HDINLINE float3_X operator()(const floatD_X& totalCellIdx) const
+                {
+                    float3_64 const invUnitField
+                        = float3_64(1.0 / m_unitField[0], 1.0 / m_unitField[1], 1.0 / m_unitField[2]);
+                    float3_X const amplitude = precisionCast<float_X>(Params::AMPLITUDE_SI * invUnitField);
+                    return amplitude * twtsFieldBneg(totalCellIdx, m_currentStep);
+                }
+
+#if PARAM_COMPONENTWISE
+                template<uint32_t T_component>
+                HDINLINE float_X getComponent(floatD_X const& totalCellIdx) const
+                {
+                    float_64 const invUnitField = 1.0 / m_unitField[T_component];
+                    float_X const amplitude = precisionCast<float_X>(Params::AMPLITUDE_SI * invUnitField);
+                    return amplitude * twtsFieldBneg.getComponent<T_component>(totalCellIdx, m_currentStep);
+                }
+#endif
+            };
+
+            // Enable functors defined in this file depending on PARAM_FIELD_BACKGROUND
+            using MyProfile = MakeSeq_t<
+#if PARAM_FIELD_BACKGROUND
+                profiles::None
+#else
+                profiles::Free<FunctorEpos, FunctorBpos>,
+                profiles::Free<FunctorEneg, FunctorBneg>
+#endif
+                >;
+
+            using XMin = MyProfile;
+            using XMax = MyProfile;
+            using YMin = MyProfile;
+            using YMax = profiles::None;
+            using ZMin = MyProfile;
+            using ZMax = MyProfile;
+
+            // These values are chosen to match the background, have to be changed for higher order field solvers
+            constexpr int32_t POSITION[3][2] = {
+                {16, -16}, // x direction [negative, positive]
+                {16, 100000}, // y direction [negative, positive]
+                {16, -16} // z direction [negative, positive]
+            };
+
+        } // namespace incidentField
+    } // namespace fields
+} // namespace picongpu
