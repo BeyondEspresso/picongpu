@@ -33,6 +33,8 @@
 #include <pmacc/math/Vector.hpp>
 #include <pmacc/types.hpp>
 
+#include <tuple>
+
 namespace picongpu
 {
     /** Load pre-defined background field */
@@ -190,6 +192,20 @@ namespace picongpu
                     return (*this)(cellIdx, currentStep)[T_component];
             }
 
+            HDINLINE
+            std::tuple<BField::float_T, BField::float_T, BField::float_T> BField::initHelperVariables() const
+            {
+                /* If phi < 0 the formulas below are not directly applicable.
+                 * Instead phi is taken positive, but the entire pulse rotated by 180 deg around the
+                 * y-axis of the coordinate system in this function.
+                 */
+                auto const phiT = float_T(math::abs(phi));
+                float_T sinPhi;
+                float_T cosPhi;
+                pmacc::math::sincos(phiT, sinPhi, cosPhi);
+                return std::make_tuple(phiT, sinPhi, cosPhi);
+            }
+
             /** Calculate the By(r,t) field here
              *
              * @param pos Spatial position of the target field.
@@ -203,14 +219,7 @@ namespace picongpu
 
                 /* Propagation speed of overlap normalized to the speed of light [Default: beta0=1.0] */
                 auto const beta0 = float_T(beta_0);
-                /* If phi < 0 the formulas below are not directly applicable.
-                 * Instead phi is taken positive, but the entire pulse rotated by 180 deg around the
-                 * y-axis of the coordinate system in this function.
-                 */
-                auto const phiT = float_T(math::abs(phi));
-                float_T sinPhi;
-                float_T cosPhi;
-                pmacc::math::sincos(phiT, sinPhi, cosPhi);
+                auto const& [phiT, sinPhi, cosPhi] = initHelperVariables();
                 float_T const tanAlpha = (float_T(1.0) - beta0 * cosPhi) / (beta0 * sinPhi);
 
                 auto const cspeed = float_T(sim.si.getSpeedOfLight() / sim.unit.speed());

@@ -27,6 +27,8 @@
 #include <pmacc/math/Vector.hpp>
 #include <pmacc/types.hpp>
 
+#include <tuple>
+
 namespace picongpu
 {
     /* Load pre-defined background field */
@@ -158,6 +160,10 @@ namespace picongpu
                     floatD_X const& cellIdx,
                     pmacc::math::Vector<floatD_X, detail::numComponents> const& extraShifts,
                     float_X const currentStep) const;
+
+                /** Test initializing common boiler plate
+                 */
+                HDINLINE std::tuple<float_T, float_T, float_T> initHelperVariables() const;
 
                 /** Calculate the By(r,t) field
                  *
