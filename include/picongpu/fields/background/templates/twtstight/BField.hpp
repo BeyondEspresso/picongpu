@@ -161,9 +161,65 @@ namespace picongpu
                     pmacc::math::Vector<floatD_X, detail::numComponents> const& extraShifts,
                     float_X const currentStep) const;
 
-                /** Test initializing common boiler plate
-                 */
-                HDINLINE std::tuple<float_T, float_T, float_T> initHelperVariables() const;
+                HDINLINE
+                std::tuple<
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T>
+                defineBasicHelperVariables() const;
+
+                HDINLINE
+                std::tuple<float_T, float_T, float_T, float_T> defineMinimalCoordinates(
+                    float3_64 const& pos,
+                    float_64 const time) const;
+
+                HDINLINE
+                std::tuple<float_T, float_T, float_T, float_T, float_T> defineTrigonometryShortcuts(
+                    float_T const absPhi,
+                    float_T const sinPhi) const;
+
+                HDINLINE
+                std::tuple<
+                    alpaka::Complex<float_T>,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    float_T,
+                    alpaka::Complex<float_T>,
+                    alpaka::Complex<float_T>,
+                    float_T,
+                    alpaka::Complex<float_T>,
+                    alpaka::Complex<float_T>,
+                    alpaka::Complex<float_T>>
+                defineCommonHelperVariables(
+                    float_T const absPhi,
+                    float_T const sinPhi,
+                    float_T const cosPhi,
+                    float_T const beta0,
+                    float_T const tanAlpha,
+                    float_T const cspeed,
+                    float_T const lambda0,
+                    float_T const omega0,
+                    float_T const tauG,
+                    float_T const w0,
+                    float_T const k,
+                    float_T const x,
+                    float_T const y,
+                    float_T const z,
+                    float_T const t,
+                    float_T const cotPhi,
+                    float_T const sinPhi_2) const;
 
                 /** Calculate the By(r,t) field
                  *
