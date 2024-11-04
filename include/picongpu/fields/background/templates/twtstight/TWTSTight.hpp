@@ -56,10 +56,10 @@
 
 #pragma once
 #include "picongpu/defines.hpp"
-// include "picongpu/fields/background/templates/twtstight/numComponents.hpp"
+#include "picongpu/fields/background/templates/twtstight/numComponents.hpp"
 
 #include <pmacc/dimensions/DataSpace.hpp>
-// include <pmacc/math/Vector.hpp>
+#include <pmacc/math/Vector.hpp>
 #include <pmacc/types.hpp>
 
 namespace picongpu
@@ -68,6 +68,7 @@ namespace picongpu
     {
         namespace twtstight
         {
+            using float_T = float_X;
             /** To avoid underflows in computation, numsigmas controls where a zero cutoff is made.
              *  The fields thus are set to zero at a position (numSigmas * tauG * cspeed) ahead
              *  and behind the respective TWTS pulse envelope.
@@ -76,11 +77,15 @@ namespace picongpu
              */
             constexpr uint32_t numSigmas = 6;
 
-            class TWTSTight
+            /** Provides the E- or B-field functors of the TWTSTight laser for the
+             *  fieldBackground and incidentField approaches.
+             *  @tparam T_Field Specializes for E- or B-Field
+             *  @tparam T_dim Specializes for the simulation dimension
+             */
+            template<typename T_Field>
+            struct TWTSTight
             {
             public:
-                using float_T = float_X;
-
                 /** Center of simulation volume in number of cells */
                 PMACC_ALIGN(halfSimSize, DataSpace<simDim>);
                 /** y-position of TWTS coordinate origin inside the simulation coordinates [meter]
@@ -154,6 +159,52 @@ namespace picongpu
                     bool const auto_tdelay = true,
                     float_X const polAngle = 0. * (PI / 180.));
 
+                /** Specify your background field E(r, t) or B(r, t) here
+                 *
+                 * @param cellIdx The total cell id counted from the start at t=0, note it can be fractional
+                 * @param currentStep The current time step for the field to be calculated at, note it can be
+                 * fractional
+                 * @return float3_X with field normalized to amplitude in range [-1.:1.]
+                 *
+                 * @{
+                 */
+
+                //! Integer index version, adds in-cell shifts according to the grid used; t = currentStep * dt
+                //! This interface is used by the fieldBackground approach for implementing fields.
+                HDINLINE float3_X operator()(DataSpace<simDim> const& cellIdx, uint32_t const currentStep) const;
+
+                //! Floating-point index version, uses fractional cell index as provided; t = currentStep * dt
+                //! This interface is used by the incidentField approach for implementing fields.
+                HDINLINE float3_X operator()(floatD_X const& cellIdx, float_X const currentStep) const;
+
+                /** @} */
+
+                /** Calculate the given component of E(r, t) or B(r, t)
+                 *
+                 * Result is same as for the fractional version of operator()(cellIdx, currentStep)[T_component].
+                 * This version exists for optimizing usage in incident field where single components are needed.
+                 *
+                 * @tparam T_component field component, 0 = x, 1 = y, 2 = z
+                 *
+                 * @param cellIdx The total fractional cell id counted from the start at t=0
+                 * @param currentStep The current time step for the field to be calculated at
+                 * @return float_X with field component normalized to amplitude in range [-1.:1.]
+                 */
+                template<uint32_t T_component>
+                HDINLINE float_X getComponent(floatD_X const& cellIdx, float_X const currentStep) const;
+
+                /** Calculate E(r, t) or B(r, t) for given position, time, and extra in-cell shifts
+                 *
+                 * @param cellIdx The total cell id counted from the start at t=0, note it is fractional
+                 * @param extraShifts The extra in-cell shifts to be added to calculate the position
+                 * @param currentStep The current time step for the field to be calculated at, note it is fractional
+                 */
+                HDINLINE float3_X getValue(
+                    floatD_X const& cellIdx,
+                    pmacc::math::Vector<floatD_X, detail::numComponents> const& extraShifts,
+                    float_X const currentStep) const;
+
+                //! Helper method to define basic TWTS variables
                 HDINLINE
                 std::tuple<
                     float_T,
@@ -169,16 +220,20 @@ namespace picongpu
                     float_T>
                 defineBasicHelperVariables() const;
 
+                //! Helper method to define reduced TWTSTight coordinates
                 HDINLINE
                 std::tuple<float_T, float_T, float_T, float_T> defineMinimalCoordinates(
                     float3_64 const& pos,
                     float_64 const& time) const;
 
+                //! Helper method to define trigonometry shortcuts
                 HDINLINE
                 std::tuple<float_T, float_T, float_T, float_T, float_T> defineTrigonometryShortcuts(
                     float_T const& absPhi,
                     float_T const& sinPhi) const;
 
+                //! Helper method to define common (complex-valued) variables
+                //! for TWTSTight field calculation
                 HDINLINE
                 std::tuple<
                     alpaka::Complex<float_T>,
@@ -213,12 +268,43 @@ namespace picongpu
                     float_T const& t,
                     float_T const& cotPhi,
                     float_T const& sinPhi_2) const;
+
+                /** Calculate the Ex(r,t) or Bx(r,t) field
+                 *
+                 * @param pos Spatial position of the target field.
+                 * @param time Absolute time (SI, including all offsets and transformations)
+                 *  for calculating the field
+                 * @tparam T_Field Specializes for E- or B-Field
+                 * @return Ex- or Bx-field component of the TWTS field in SI units */
+                HDINLINE float_T calcTWTSFieldX(float3_64 const& pos, float_64 const time) const;
+
+                /** Calculate the Ey(r,t) or By(r,t) field
+                 *
+                 * @param pos Spatial position of the target field.
+                 * @param time Absolute time (SI, including all offsets and transformations)
+                 *  for calculating the field
+                 * @tparam T_Field Specializes for E- or B-Field
+                 * @return Ey- or By-field component of the TWTS field in SI units */
+                HDINLINE float_T calcTWTSFieldY(float3_64 const& pos, float_64 const time) const;
+
+                /** Calculate the Ez(r,t) or Bz(r,t) field
+                 *
+                 * @param pos Spatial position of the target field.
+                 * @param time Absolute time (SI, including all offsets and transformations)
+                 *  for calculating the field
+                 * @return Ey- or Bz-field component of the TWTS field in SI units */
+                HDINLINE float_T calcTWTSFieldZ(float3_64 const& pos, float_64 const time) const;
+
+                /** Calculate the E- or B-field vector of the TWTS laser in SI units.
+                 * @param cellIdx The total cell id counted from the start at timestep 0
+                 * @return E- or B-field vector of the TWTS field in SI units */
+                HDINLINE float3_X getTWTSField_Normalized(
+                    pmacc::math::Vector<floatD_64, detail::numComponents> const& fieldPositions_SI,
+                    float_64 const time) const;
             };
 
         } // namespace twtstight
     } // namespace templates
 } // namespace picongpu
 
-#include "picongpu/fields/background/templates/twtstight/BField.hpp"
-#include "picongpu/fields/background/templates/twtstight/EField.hpp"
-#include "picongpu/fields/background/templates/twtstight/twtstight.tpp"
+#include "picongpu/fields/background/templates/twtstight/TWTSTight.tpp"

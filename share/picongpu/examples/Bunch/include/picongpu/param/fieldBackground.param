@@ -21,7 +21,7 @@
 
 /** Load pre-defined templates */
 #if PARAM_TWTSTIGHT == 1
-#    include "picongpu/fields/background/templates/twtstight/twtstight.hpp"
+#    include "picongpu/fields/background/templates/twtstight/TWTSTight.hpp"
 #else
 #    include "picongpu/fields/background/templates/TWTS/TWTS.hpp"
 #endif
