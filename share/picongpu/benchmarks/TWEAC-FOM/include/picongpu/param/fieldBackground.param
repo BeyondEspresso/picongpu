@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "picongpu/fields/background/templates/twtstight/twtstight.hpp"
+#include "picongpu/fields/background/templates/twtstight/TWTSTight.hpp"
 
 /** Load parameters of the TWTS background laser field */
 #include "TwtsBackgroundLaser.param"

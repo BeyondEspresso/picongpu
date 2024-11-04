@@ -55,8 +55,8 @@
 
 #pragma once
 
-#include "picongpu/fields/background/templates/twtstight/twtstight.hpp"
-#include "picongpu/fields/incidentField/profiles/profiles.def"
+#include "picongpu/fields/background/templates/twtstight/TWTSTight.hpp"
+#include "picongpu/fields/incidentField/profiles/profiles.def
 
 /** Load parameters of the TWTS background laser field */
 #include "TwtsBackgroundLaser.param"
@@ -278,7 +278,7 @@ namespace picongpu
              *
              * For moving window simulations, POSITION for the YMax side can be located outside the initially
              * simulated volume. In this case, parts of the generation surface outside of the currently simulated
-             * volume is are treated as if they had zero incident field and it is user's responsibility to apply a
+             * volume are treated as if they had zero incident field and it is user's responsibility to apply a
              * source matching such a case.
              */
             constexpr int32_t POSITION[3][2] = {
