@@ -56,7 +56,7 @@
 #pragma once
 
 #include "picongpu/fields/background/templates/twtstight/TWTSTight.hpp"
-#include "picongpu/fields/incidentField/profiles/profiles.def
+#include "picongpu/fields/incidentField/profiles/profiles.def"
 
 /** Load parameters of the TWTS background laser field */
 #include "TwtsBackgroundLaser.param"

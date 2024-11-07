@@ -1,4 +1,4 @@
-/* Copyright 2014-2024 Alexander Debus
+/* Copyright 2014-2024 Alexander Debus, Axel Huebl, Sergei Bastrakov
  *
  * This file is part of PIConGPU.
  *

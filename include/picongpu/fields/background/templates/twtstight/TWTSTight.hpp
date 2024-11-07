@@ -1,4 +1,4 @@
-/* Copyright 2014-2024 Alexander Debus
+/* Copyright 2014-2024 Alexander Debus, Axel Huebl, Sergei Bastrakov
  *
  * This file is part of PIConGPU.
  *
@@ -271,7 +271,7 @@ namespace picongpu
 
                 /** Calculate the Ex(r,t) or Bx(r,t) field
                  *
-                 * @param pos Spatial position of the target field.
+                 * @param pos Spatial position of the target field
                  * @param time Absolute time (SI, including all offsets and transformations)
                  *  for calculating the field
                  * @tparam T_Field Specializes for E- or B-Field
@@ -280,7 +280,7 @@ namespace picongpu
 
                 /** Calculate the Ey(r,t) or By(r,t) field
                  *
-                 * @param pos Spatial position of the target field.
+                 * @param pos Spatial position of the target field
                  * @param time Absolute time (SI, including all offsets and transformations)
                  *  for calculating the field
                  * @tparam T_Field Specializes for E- or B-Field
@@ -289,10 +289,10 @@ namespace picongpu
 
                 /** Calculate the Ez(r,t) or Bz(r,t) field
                  *
-                 * @param pos Spatial position of the target field.
+                 * @param pos Spatial position of the target field
                  * @param time Absolute time (SI, including all offsets and transformations)
                  *  for calculating the field
-                 * @return Ey- or Bz-field component of the TWTS field in SI units */
+                 * @return Ez- or Bz-field component of the TWTS field in SI units */
                 HDINLINE float_T calcTWTSFieldZ(float3_64 const& pos, float_64 const time) const;
 
                 /** Calculate the E- or B-field vector of the TWTS laser in SI units.
