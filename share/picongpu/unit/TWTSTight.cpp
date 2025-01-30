@@ -69,8 +69,8 @@ struct GenerateEvals
     using float_T = templates::twtstight::float_T;
 
     HINLINE GenerateEvals()
-        : testEfield(0.0, 800.0e-9, 30.0e-15, 2.5e-6, 5. * (PI / 180.), 1.0, 0.0, false, 30. * (PI / 180.))
-        , testBfield(0.0, 800.0e-9, 30.0e-15, 2.5e-6, 5. * (PI / 180.), 1.0, 0.0, false, 30. * (PI / 180.))
+        : testEfield(0.0, 800.0e-9, 30.0e-15, 1.0e-6, 5. * (PI / 180.), 1.0, 0.0, false, 30. * (PI / 180.))
+        , testBfield(0.0, 800.0e-9, 30.0e-15, 1.0e-6, 5. * (PI / 180.), 1.0, 0.0, false, 30. * (PI / 180.))
     {
     }
 
@@ -118,7 +118,7 @@ struct twtsTightNumberTest
             0.0,
             800.0e-9,
             30.0e-15,
-            2.5e-6,
+            1.0e-6,
             5. * (PI / 180.),
             1.0,
             0.0,
@@ -128,7 +128,7 @@ struct twtsTightNumberTest
             0.0,
             800.0e-9,
             30.0e-15,
-            2.5e-6,
+            1.0e-6,
             5. * (PI / 180.),
             1.0,
             0.0,
@@ -145,9 +145,9 @@ struct twtsTightNumberTest
         const float3_64 pos = float3_64{1.0e-6, 1.0e-6, 100.0 * 1.5e-6};
         const float_64 time = float_64(1.0e-15);
 
-        HostBuffer<float_T, 1u> resultHost(numValues);
-        DeviceBuffer<float_T, 1u> resultDevice(numValues);
-        resultDevice.setValue(float_T(0.0));
+        HostBuffer<float_X, 1u> resultHost(numValues);
+        DeviceBuffer<float_X, 1u> resultDevice(numValues);
+        resultDevice.setValue(float_X(0.0));
 
         PMACC_LOCKSTEP_KERNEL(GenerateEvals<numThreadsPerBlock>{})
             .template config<numThreadsPerBlock>(
@@ -168,16 +168,19 @@ struct twtsTightNumberTest
 // This combination of compilers has a bug that is triggered by Catch2 internally suppressing warnings.
 // See https://github.com/ComputationalRadiationPhysics/picongpu/pull/5174#issuecomment-2467890326
 #if(__GNUC__ != 11 || __CUDACC_VER_MAJOR__ != 11)
-        const float3_64 refEfield = float3_64(0.18329124052693974, -0.009402050968104002, 0.1054028749666347);
-        const float3_64 refBfield = float3_64(3.5299706879027803e-10, 5.334111474127282e-11, -6.090365721598194e-10);
-        const float3_T refEfieldT = precisionCast<float_T>(refEfield);
-        const float3_T refBfieldT = precisionCast<float_T>(refBfield);
+        //      const float3_64 refEfield = float3_64(0.18329124052693974, -0.009402050968104002, 0.1054028749666347);
+        //      const float3_64 refBfield = float3_64(3.5299706879027803e-10, 5.334111474127282e-11,
+        //      -6.090365721598194e-10);
+        const float3_64 refEfield = float3_64(0.0627989372576774, -0.0032682438292262373, 0.03611034808125113);
+        const float3_64 refBfield = float3_64(1.2093663913606312e-10, 1.858285449861524e-11, -2.0866003152269262e-10);
+        const float3_X refEfieldT = precisionCast<float_X>(refEfield);
+        const float3_X refBfieldT = precisionCast<float_X>(refBfield);
         /* epsilon to compare to Mathematica implementation.
          * Note: Reduction of epsilon would require replacing complex-valued bessel function support in
          * PMacc with boost library calls that also work on device. */
-        const float_T epsilonAlgebra = float_T(5.0e-6);
+        const float_X epsilonAlgebra = float_X(5.0e-6);
         /* Epsilon to compare host implementation to device implementation */
-        const float_T epsilonHostDevice = float_T(5.0e-15);
+        const float_X epsilonHostDevice = float_X(5.0e-15);
         for(uint32_t i = 0; i < 3; i++)
         {
             CHECK(isApproxEqual(refEfieldT[i], res[i], epsilonAlgebra));

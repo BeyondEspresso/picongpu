@@ -67,7 +67,7 @@
 
 namespace picongpu::templates::twtstight
 {
-    using float_T = float_X;
+    using float_T = float_64;
     using complex_T = alpaka::Complex<float_T>;
     using complex_64 = alpaka::Complex<float_64>;
     /** To avoid underflows in computation, numsigmas controls where a zero cutoff is made.
@@ -76,7 +76,7 @@ namespace picongpu::templates::twtstight
      *  Developer note: In case the float_T-type is set to float_64 instead of float_X,
      *  numSigma can be increased to numSigmas = 10 without running into numerical issues.
      */
-    constexpr uint32_t numSigmas = 6;
+    constexpr uint32_t numSigmas = 10;
 
     /** Provides the E- or B-field functors of the TWTSTight laser for the
      *  fieldBackground and incidentField approaches.
