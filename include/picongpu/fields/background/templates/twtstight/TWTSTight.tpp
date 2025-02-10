@@ -85,10 +85,10 @@ namespace picongpu::templates::twtstight
         if constexpr(simDim == DIM3)
         {
             /* E- or B-field normalized to the peak amplitude. */
-            return static_cast<float3_X>(
+            return precisionCast<float_X>(float3_T(
                 calcTWTSFieldX(fieldPositions_SI[0], time),
                 calcTWTSFieldY(fieldPositions_SI[1], time),
-                calcTWTSFieldZ(fieldPositions_SI[2], time));
+                calcTWTSFieldZ(fieldPositions_SI[2], time)));
         }
         if constexpr(simDim == DIM2)
         {
@@ -103,14 +103,12 @@ namespace picongpu::templates::twtstight
                 }
             }
             /* E- or B-field normalized to the peak amplitude. */
-            return static_cast<float3_X>(
-                calcTWTSFieldX(pos[0], time),
-                calcTWTSFieldY(pos[1], time),
-                calcTWTSFieldZ(pos[2], time));
+            return precisionCast<float_X>(
+                float3_T(calcTWTSFieldX(pos[0], time), calcTWTSFieldY(pos[1], time), calcTWTSFieldZ(pos[2], time)));
         }
         // We should never be here.
         else
-            return static_cast<float3_X>(NAN);
+            return float3_X(NAN);
     }
 
     template<typename T_Field>

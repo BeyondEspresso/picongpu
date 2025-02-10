@@ -68,6 +68,7 @@
 namespace picongpu::templates::twtstight
 {
     using float_T = float_X;
+    using float3_T = ::pmacc::math::Vector<float_T, 3u>;
     using complex_T = alpaka::Complex<float_T>;
     using complex_64 = alpaka::Complex<float_64>;
     /** To avoid underflows in computation, numsigmas controls where a zero cutoff is made.
