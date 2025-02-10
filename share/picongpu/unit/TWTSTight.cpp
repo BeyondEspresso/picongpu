@@ -189,6 +189,31 @@ struct twtsTightNumberTest
             CHECK(isApproxEqual(hostBfield[i], res[i + 3], epsilonHostDevice));
         }
 #endif
+        float3_64 const cellDim(picongpu::sim.pic.getCellSize());
+        float3_64 const cellDimensions = cellDim * sim.unit.length();
+        // float3_X const amplitude = precisionCast<float_X>(float_64( 2.0 ) * float3_64( 1.0, 2.0, 3.0 ));
+        std::cout << "halfSimSize    : { " << testEfield.halfSimSize[0] << ",  " << testEfield.halfSimSize[1] << ",  "
+                  << testEfield.halfSimSize[2] << " }" << std::endl;
+        std::cout << "cellDimensions : { " << cellDimensions[0] << ",  " << cellDimensions[1] << ",  "
+                  << cellDimensions[2] << " }" << std::endl;
+        float3_X const eFieldProbe(testEfield(DataSpace<3>{0, 1, 2}, 0u));
+        std::cout << "eFieldProbe    : { " << eFieldProbe[0] << ",  " << eFieldProbe[1] << ",  " << eFieldProbe[2]
+                  << " }" << std::endl;
+        picongpu::traits::FieldPosition<fields::YeeCell, FieldE> const fieldPos;
+        pmacc::math::Vector<floatD_64, templates::twtstight::detail::numComponents> const fieldPositions_SI
+            = templates::twtstight::detail::getFieldPositions_SI(
+                float3_X(0., 1., 2.),
+                testEfield.halfSimSize,
+                fieldPos(),
+                sim.unit.length(),
+                0.0,
+                30. * (PI * 180.));
+        float3_X const eFieldProbe2(testEfield.getTWTSField_Normalized(fieldPositions_SI, float_64(0.0)));
+        std::cout << "eFieldProbe2   : { " << eFieldProbe2[0] << ",  " << eFieldProbe2[1] << ",  " << eFieldProbe2[2]
+                  << " }" << std::endl;
+        std::cout << "eFieldProbe3   : { " << testEfield.calcTWTSFieldX(fieldPositions_SI[0], float_64(0.0)) << ",  "
+                  << testEfield.calcTWTSFieldY(fieldPositions_SI[1], float_64(0.0)) << ",  "
+                  << testEfield.calcTWTSFieldZ(fieldPositions_SI[2], float_64(0.0)) << " }" << std::endl;
     }
 };
 
