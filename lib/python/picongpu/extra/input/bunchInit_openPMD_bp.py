@@ -358,7 +358,6 @@ class addParticles2Checkpoint:
         run_pipe = pipe(self.filename_in, self.filename_out, self, verbose=self.verbose)
         run_pipe.run()
 
-
 class Chunk:
     """
     A Chunk is an n-dimensional hypercube, defined by an offset and an extent.
@@ -480,6 +479,7 @@ class pipe:
         self.inconfig = inconfig
         self.outconfig = outconfig
         self.verbose = verbose
+        self.__copy_buffers = {}
 
     def run(self):
         """
@@ -581,7 +581,7 @@ class pipe:
                 self.__particle_patches.clear()
                 sys.stdout.flush()
 
-        elif isinstance(src, opmd.Record_Component) and (not is_container or src.scalar):
+        elif isinstance(src, opmd.Record_Component) and not isinstance(src, opmd.Patch_Record_Component) and (not is_container or src.scalar):
             # copies record components
             shape = src.shape
             dtype = src.dtype
@@ -594,15 +594,43 @@ class pipe:
             elif src.constant:
                 dest.make_constant(src.get_attribute("value"))
             else:
-                chunk = Chunk(offset, shape)
-                local_chunk = chunk.slice1D()
+                available_chunks = src.available_chunks()
 
-                # write content of src record to dest record and
-                # flush afterwards
-                loaded_buffer = src.load_chunk(local_chunk.offset, local_chunk.extent)
-                src.series_flush()
-                dest.store_chunk(loaded_buffer, local_chunk.offset, local_chunk.extent)
-                dest.series_flush()
+                for i, chunk in enumerate(available_chunks):
+                    chunk_offset = list(chunk.offset)
+                    chunk_extent = list(chunk.extent)
+
+                    key = (
+                        np.dtype(dtype).str,
+                        tuple(chunk_extent)
+                    )
+
+                    if key not in self.__copy_buffers:
+                        self.__copy_buffers[key] = np.empty(
+                            tuple(chunk_extent),
+                            dtype=dtype
+                        )
+
+                    loaded_buffer = self.__copy_buffers[key]
+
+                    src.load_chunk(
+                        loaded_buffer,
+                        chunk_offset,
+                        chunk_extent
+                    )
+                    src.series_flush()
+
+                    dest.store_chunk(
+                        loaded_buffer,
+                        chunk_offset,
+                        chunk_extent
+                    )
+
+                    # Defensive flushing to avoid accumulating memory usage by asynchronous reading. Probably not needed here.
+                    dest.series_flush(
+                        '{"adios2": {"engine": '
+                        '{"preferred_flush_target": "disk_override"}}}'
+                    )
 
         elif isinstance(src, opmd.Patch_Record_Component) and (not is_container or src.scalar):
             # copies patch record components
