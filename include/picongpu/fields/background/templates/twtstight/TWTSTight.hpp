@@ -249,14 +249,14 @@ namespace picongpu::templates::twtstight
         //! Helper method to define common (complex-valued) variables
         //! for TWTSTight field calculation
         HDINLINE
-        std::tuple<std::array<float_T, 6u>, std::array<complex_T, 6u>> defineCommonHelperVariables(
+        std::tuple<std::array<float_T, 5u>, std::array<complex_T, 6u>> defineCommonHelperVariables(
             Coordinates const& minimalCoordinates) const;
 
         //! Defines the non-focused laser envelope (aka zero order term)
         //! for TWTSTight field calculation
         HDINLINE complex_T defineTWTSEnvelope(
             Coordinates const& minimalCoordinates,
-            std::tuple<std::array<float_T, 6u>, std::array<complex_T, 6u>> const& commonHelperVariables) const;
+            std::tuple<std::array<float_T, 5u>, std::array<complex_T, 6u>> const& commonHelperVariables) const;
 
         /** Calculate the Ex(r,t) or Bx(r,t) field
          *

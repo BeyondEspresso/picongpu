@@ -23,6 +23,7 @@
 #include "picongpu/defines.hpp"
 #include "picongpu/fields/YeeCell.hpp"
 #include "picongpu/fields/background/templates/twtstight/BField.tpp"
+#include "picongpu/fields/background/templates/twtstight/BesselRatios.hpp"
 #include "picongpu/fields/background/templates/twtstight/EField.tpp"
 #include "picongpu/fields/background/templates/twtstight/GetInitialTimeDelay_SI.tpp"
 #include "picongpu/fields/background/templates/twtstight/TWTSTight.hpp"
@@ -307,7 +308,7 @@ namespace picongpu::templates::twtstight
     }
 
     template<typename T_Field>
-    HDINLINE std::tuple<std::array<float_T, 6u>, std::array<complex_T, 6u>> TWTSTight<
+    HDINLINE std::tuple<std::array<float_T, 5u>, std::array<complex_T, 6u>> TWTSTight<
         T_Field>::defineCommonHelperVariables(Coordinates const& minimalCoordinates) const
     {
         auto const [absPhi, sinPhi, cosPhi, beta0, tanAlpha, cspeed, lambda0, omega0, tauG, w0, k]
@@ -319,31 +320,31 @@ namespace picongpu::templates::twtstight
         float_T const psi0 = float_T(2.0) / k;
         float_T const w02 = w0 * w0;
         float_T const beta02 = beta0 * beta0;
-        float_T const besselI0const = math::bessel::i0(k * k * sinPhi * w02 / float_T(2.0));
+        float_T const besselI0Arg = k * k * sinPhi * w02 / float_T(2.0);
 
         complex_T const Xm = -z - complex_T(0, 0.5) * (k * w02);
-        complex_T const rhom = math::sqrt(x2 + math::cPow(Xm, static_cast<uint32_t>(2u)));
         complex_T const Xm2 = Xm * Xm;
-        complex_T const rhom2 = rhom * rhom;
-        complex_T const besselJ0const = math::bessel::j0(k * sinPhi * rhom);
-        complex_T const besselJ1const = math::bessel::j1(k * sinPhi * rhom);
+        // Use the defining identity rather than squaring the rounded complex square root.
+        complex_T const rhom2 = Xm2 + x2;
+        complex_T const rhom = math::sqrt(rhom2);
+        auto const [besselJ0OverI0, besselJ1OverI0] = detail::besselJOverI0(k * sinPhi * rhom, besselI0Arg);
 
         return std::make_tuple(
-            std::array<float_T, 6u>{x2, tauG2, psi0, w02, beta02, besselI0const},
-            std::array<complex_T, 6u>{Xm, rhom, Xm2, rhom2, besselJ0const, besselJ1const});
+            std::array<float_T, 5u>{x2, tauG2, psi0, w02, beta02},
+            std::array<complex_T, 6u>{Xm, rhom, Xm2, rhom2, besselJ0OverI0, besselJ1OverI0});
     }
 
     template<typename T_Field>
     HDINLINE complex_T TWTSTight<T_Field>::defineTWTSEnvelope(
         Coordinates const& minimalCoordinates,
-        std::tuple<std::array<float_T, 6u>, std::array<complex_T, 6u>> const& commonHelperVariables) const
+        std::tuple<std::array<float_T, 5u>, std::array<complex_T, 6u>> const& commonHelperVariables) const
     {
         auto const [absPhi, sinPhi, cosPhi, beta0, tanAlpha, cspeed, lambda0, omega0, tauG, w0, k]
             = basicTWTSHelperVariables;
         auto const [x, y, z, t, nu, xi] = minimalCoordinates;
         auto const [tanPhi, cotPhi, sinPhi_2, cosPhi_2, sinPolAngle, cosPolAngle, sin2Phi] = trigonometryShortcuts;
         auto const& [floatHelpers, complexHelpers] = commonHelperVariables;
-        auto const [x2, tauG2, psi0, w02, beta02, besselI0const] = floatHelpers;
+        auto const [x2, tauG2, psi0, w02, beta02] = floatHelpers;
         auto const q = tanAlpha * (nu * tanAlpha - xi * cotPhi);
         complex_T const sigma(omega0 * tauG2, -float_T(2.0) * q);
         float_T const u = t - nu - xi;
