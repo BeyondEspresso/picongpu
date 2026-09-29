@@ -27,9 +27,9 @@ def row(values):
     return "{" + ", ".join(mp.nstr(v, 22) for v in values) + "}"
 
 
-def ratio_references():
+def ratio_cases():
     # a, Re(q), Im(q): all exactly representable in float and double.
-    cases = [
+    return [
         ("49.9990234375", "3", "49.9990234375"),
         ("50", "3", "50"),
         ("50.0009765625", "3", "50.0009765625"),
@@ -41,9 +41,17 @@ def ratio_references():
         ("100", "0", "100"),
         ("1000", "0", "1000"),
         ("1000", "0", "0"),
+        ("50", "3", "4"),
+        ("50", "31", "2"),
+        ("1000", "3", "1000"),
+        ("104", "0", "0"),
+        ("746", "0", "0"),
     ]
+
+
+def ratio_references():
     print("// a, Re(q), Im(q), Re(R0), Im(R0), Re(R1), Im(R1)")
-    for inputs in cases:
+    for inputs in ratio_cases():
         a, qr, qi = map(mp.mpf, inputs)
         q = mp.mpc(qr, qi)
         r0, r1 = [mp.besselj(n, q) / mp.besseli(0, a) for n in (0, 1)]
@@ -171,6 +179,35 @@ def fields(waist_um, z_sign, beta0="1"):
     return [v.real for v in (Ex, Ey, Ez, Bx, By, Bz)]
 
 
+def check_scaled_ratios():
+    """Check the ratio assembly with exact scaled numerators and the C++ S0 truncation.
+
+    This isolates the normalization formula; PMacc's on-device j0e/j1e accuracy
+    is tested separately by besselUT.cpp and the C++ ratio test.
+    """
+    worst = mp.mpf(0)
+    for inputs in ratio_cases():
+        a, qr, qi = map(mp.mpf, inputs)
+        if a < 50:
+            continue
+        term = series = mp.mpf(1)
+        for k in range(1, 13):
+            term *= (2 * k - 1) ** 2 / (8 * k * a)
+            series += term
+        normalization = mp.sqrt(2 * mp.pi * a) / series
+        for sign in (1, -1):
+            q = mp.mpc(qr, sign * qi)
+            half_exponential = mp.exp((abs(q.imag) - a) / 2)
+            for n in (0, 1):
+                scaled = mp.exp(-abs(q.imag)) * mp.besselj(n, q)
+                assembled = ((scaled * normalization) * half_exponential) * half_exponential
+                direct = mp.besselj(n, q) / mp.besseli(0, a)
+                error = abs(assembled / direct - 1) if direct else abs(assembled)
+                worst = max(worst, error)
+                assert error < mp.mpf("3e-18")
+    print("// PASS: scaled ratio assembly; maximum relative deviation", mp.nstr(worst, 8))
+
+
 def check_references():
     """Check the committed decimal constants without replacing the Mathematica row."""
     source = Path(__file__).with_name("TWTSTight.cpp").read_text()
@@ -247,6 +284,7 @@ if __name__ == "__main__":
     mp.dps = args.dps
     if args.check:
         check_references()
+        check_scaled_ratios()
     else:
         ratio_references()
         print("\n// waist [m], zSign, {Ex, Ey, Ez, Bx, By, Bz}")

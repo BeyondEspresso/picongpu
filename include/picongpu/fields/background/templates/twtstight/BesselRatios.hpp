@@ -57,8 +57,8 @@ namespace picongpu::templates::twtstight::detail
      * - Coefficients: https://dlmf.nist.gov/10.17.E1
      * - Remainder bounds: https://dlmf.nist.gov/10.40.iii
      *
-     * @tparam T_order Bessel order, used here only for n=0 and n=1.
-     * @param z Real or complex argument; callers use Re(z) >= 50.
+     * @tparam T_order Bessel order; the ratio denominator uses n=0.
+     * @param z Real or complex argument; the ratio denominator supplies real a >= 50.
      */
     template<uint32_t T_order, typename T_Value>
     HDINLINE T_Value besselISeries(T_Value const& z)
@@ -89,48 +89,24 @@ namespace picongpu::templates::twtstight::detail
      * Near the beam axis |Im(q)| is close to a. Thus J_n(q) and I_0(a) can each
      * overflow even though their ratio is representable.
      *
-     * Rotation to modified Bessel functions (DLMF 10.27.6):
-     * With s = sign(Im(q)) and u = -i s q, J_n(q) = (i s)^n I_n(u).
-     * This identity is exact for the integer orders n=0,1. The sign is position
-     * dependent and ensures Re(u) = |Im(q)| > 0 in the asymptotic branch.
-     * Inserting the I_n expansion documented in besselISeries() gives
+     * The scaled PMacc functions return J_ne(q) = exp(-|Im(q)|) * J_n(q).
+     * For a >= 50, the real denominator uses
      *
-     *   R_n = J_n(q)/I_0(a)
-     *       ~ (i s)^n * exp(u-a) * sqrt(a/u) * S_n(u)/S_0(a).
+     *   I_0(a) ~ exp(a) / sqrt(2*pi*a) * S_0(a),
+     *   R_n ~ J_ne(q) * sqrt(2*pi*a) / S_0(a) * exp(|Im(q)|-a).
      *
-     * The common exponential is evaluated as exp(u-a), so exp(u) and exp(a)
-     * are never formed separately. With a>0 and Re(u)>0, principal square roots
-     * satisfy sqrt(a)/sqrt(u) = sqrt(a/u), without an additional branch sign.
-     * The order-one ratio needs the factor i*s; the order-zero ratio does not.
+     * Only the real denominator needs the asymptotic series. The scaled numerator
+     * handles both signs of Im(q), the real axis, and q=0 without a local rotation
+     * or a separate large-complex-argument approximation.
+     * Evaluate the exponential as two factors exp((|Im(q)|-a)/2), applied after
+     * the algebraic normalization. This avoids prematurely underflowing exp(-a)
+     * when q is small but the normalized ratio is still representable.
+     * For TWTS geometry |Im(q)| <= a in exact arithmetic, so these factors do not grow.
      *
-     * Branches and threshold:
-     * - a < 50: preserve the direct PMacc Bessel calculation. For these TWTS
-     *   arguments |Im(q)| <= a in exact arithmetic, so both Bessel values are safe.
-     * - a >= 50 and |Im(q)| >= 50: use the combined asymptotic ratio above.
-     *   DLMF 10.40.1 applies in sectors |arg(u)| <= pi/2-delta, delta>0.
-     *   Here arg(u) is the complex phase in radians, and delta is an arbitrary
-     *   fixed positive angular margin keeping the sector away from the imaginary
-     *   axis. It belongs to the mathematical statement, not to the implementation;
-     *   the code instead checks Re(u) = |Im(q)| >= 50.
-     *   DLMF 10.40.5 also displays the exp(-u) contribution relevant near the
-     *   imaginary axis. Its exponential magnitude relative to exp(u) is
-     *   exp(-2*Re(u)) <= exp(-100), well below double precision roundoff here.
-     * - a >= 50 and |Im(q)| < 50: large a alone does not justify approximating
-     *   I_n(u). This includes q=0 and real q, where both oscillatory contributions
-     *   to J_n matter. Evaluate the bounded J_n(q) directly and use
-     *
-     *     R_n ~ [J_n(q)*exp(-50)] * [exp(50-a)*sqrt(2*pi*a)/S_0(a)].
-     *
-     *   The split exponential avoids prematurely underflowing exp(-a), while
-     *   keeping the numerator within range even in float precision.
-     * The threshold and series length target truncation below rounding error;
-     * they do not remove rounding already present in the input arguments u and a.
-     * Reference comparisons are in unit/dimensional_tests/TWTSTight.cpp.
-     *
-     * References (NIST Digital Library of Mathematical Functions):
-     * - Exact J_n/I_n connection: https://dlmf.nist.gov/10.27.E6
-     * - Dominant exponential expansion: https://dlmf.nist.gov/10.40.E1
-     * - Expansion including both exponentials: https://dlmf.nist.gov/10.40.E5
+     * For a < 50, retain the direct calculation: both unscaled functions are safe
+     * for TWTS arguments. The real S_0(a) expansion and its error estimate are
+     * documented in besselISeries(). Input rounding in |Im(q)|-a still limits
+     * the attainable accuracy near the beam axis.
      *
      * @param q Complex TWTS Bessel argument.
      * @param a Positive real normalization argument.
@@ -140,7 +116,6 @@ namespace picongpu::templates::twtstight::detail
     HDINLINE std::array<alpaka::Complex<T_Float>, 2u> besselJOverI0(alpaka::Complex<T_Float> const& q, T_Float const a)
     {
         namespace math = pmacc::math;
-        using Complex = alpaka::Complex<T_Float>;
         constexpr T_Float threshold = T_Float(50);
         if(a < threshold)
         {
@@ -149,20 +124,10 @@ namespace picongpu::templates::twtstight::detail
         }
 
         T_Float const denominatorSeries = besselISeries<0u>(a);
-        if(math::abs(q.imag()) < threshold)
-        {
-            // Far from the axis q can be small or real even for large a. Keep both
-            // oscillatory contributions to J_n there, and scale before multiplying.
-            T_Float const scale = math::exp(threshold - a)
-                                  * (math::sqrt(T_Float(2) * math::Pi<T_Float>::value * a) / denominatorSeries);
-            T_Float const numeratorScale = math::exp(-threshold);
-            return {(math::bessel::j0(q) * numeratorScale) * scale, (math::bessel::j1(q) * numeratorScale) * scale};
-        }
-
-        T_Float const sign = q.imag() < T_Float(0) ? T_Float(-1) : T_Float(1);
-        Complex const is(0, sign);
-        Complex const u = -is * q;
-        Complex const scale = math::exp(u - a) * math::sqrt(a / u) / denominatorSeries;
-        return {scale * besselISeries<0u>(u), is * scale * besselISeries<1u>(u)};
+        T_Float const normalization = math::sqrt(T_Float(2) * math::Pi<T_Float>::value * a) / denominatorSeries;
+        T_Float const halfExponential = math::exp((math::abs(q.imag()) - a) * T_Float(0.5));
+        return {
+            ((math::bessel::j0e(q) * normalization) * halfExponential) * halfExponential,
+            ((math::bessel::j1e(q) * normalization) * halfExponential) * halfExponential};
     }
 } // namespace picongpu::templates::twtstight::detail
