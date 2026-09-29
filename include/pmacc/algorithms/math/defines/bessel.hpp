@@ -93,6 +93,36 @@ namespace pmacc
                 return J1<T_Type>()(x);
             }
 
+            /** Exponentially scaled complex Bessel function of the first kind, order zero. */
+            template<typename T_Type>
+            struct J0e;
+
+            /** Evaluate exp(-abs(Im(z))) * J_0(z) without forming the growing exponential.
+             *
+             * Available for alpaka::Complex<float> and alpaka::Complex<double> through pmacc/math/Complex.hpp.
+             * The scaling is real, preserves conjugation and parity, and equals one on the real axis.
+             * Use this interface when the unscaled function would overflow. Nonfinite inputs return NaNs.
+             */
+            template<typename T_Type>
+            HDINLINE typename J0e<T_Type>::result j0e(T_Type const& z)
+            {
+                return J0e<T_Type>()(z);
+            }
+
+            /** Exponentially scaled complex Bessel function of the first kind, order one. */
+            template<typename T_Type>
+            struct J1e;
+
+            /** Evaluate exp(-abs(Im(z))) * J_1(z) without forming the growing exponential.
+             *
+             * @see j0e for supported types and scaling conventions.
+             */
+            template<typename T_Type>
+            HDINLINE typename J1e<T_Type>::result j1e(T_Type const& z)
+            {
+                return J1e<T_Type>()(z);
+            }
+
             /** Bessel function of first kind of order n
              */
             template<typename T_IntType, typename T_FloatType>
