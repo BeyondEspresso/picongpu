@@ -94,7 +94,7 @@ namespace picongpu
             particlePusher<{{{pusher_cpp}}}>,
             shape<ParticleShape_{{{typename}}}>,
             interpolation<FieldToParticleInterpolation<ParticleShape_{{{typename}}}, AssignedTrilinearInterpolation>>,
-            current<currentSolver::Esirkepov<ParticleShape_{{{typename}}}>>>;
+            current<currentSolver::{{{current_deposition}}}<ParticleShape_{{{typename}}}>>>;
 
         using ParticleAttributes_{{{typename}}} = MakeSeq_t<
             {{#attributes}}

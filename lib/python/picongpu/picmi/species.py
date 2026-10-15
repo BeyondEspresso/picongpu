@@ -8,7 +8,7 @@ License: GPLv3+
 import re
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from picmistandard import PICMI_Species
 from pydantic import (
@@ -30,7 +30,7 @@ from picongpu.pypicongpu.species.constant.constant import Constant
 from picongpu.pypicongpu.species.constant.densityratio import DensityRatio
 from picongpu.pypicongpu.species.constant.mass import Mass
 from picongpu.pypicongpu.species.operation import AnyOperation
-from picongpu.pypicongpu.species.species import Pusher, Shape
+from picongpu.pypicongpu.species.species import CurrentDeposition, Pusher, Shape
 from picongpu.pypicongpu.species.species import CompositePusher as PyPIConGPUCompositePusher
 from picongpu.pypicongpu.species.species import Species as PyPIConGPUSpecies
 
@@ -135,6 +135,10 @@ class Species(PICMI_Species):
 
     `picongpu_composite_pusher` selects a CompositePusher instead of `method`.
     Omit `method` or set it to None when using this option.
+
+    `picongpu_current_deposition` selects 'Esirkepov' (default), 'EmZ' or
+    its alias 'EZ', using this species' resolved particle shape. EmZ/EZ do
+    not support NGP.
     """
 
     # PIConGPU's native default particle shape (TSC). This is the code-level
@@ -147,6 +151,7 @@ class Species(PICMI_Species):
     particle_shape: str | None = None
     method: str | None = None
     picongpu_composite_pusher: CompositePusher | None = None
+    picongpu_current_deposition: Literal["Esirkepov", "EmZ", "EZ"] = "Esirkepov"
 
     @model_validator(mode="after")
     def _check_pusher_choice(self):
@@ -276,6 +281,7 @@ class Species(PICMI_Species):
             **self._evaluate_species_requirements(),
             shape=self._shape(default_particle_shape),
             pusher=self._pusher(),
+            current_deposition=CurrentDeposition(self.picongpu_current_deposition),
         )
 
     def picongpu_get_mass_si(self) -> float:
