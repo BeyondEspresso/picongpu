@@ -11,6 +11,28 @@ from pydantic import AfterValidator, BeforeValidator, Field, computed_field, mod
 
 from ..pypicongpu import grid, util
 from .copy_attributes import converts_to
+from .pml import PML
+from ..pypicongpu.pml import CellCount, PML as BackendPML
+
+
+def _convert_pml(self):
+    if self.pml_cells is None and self.picongpu_pml is None:
+        return None
+    dimensions = self.number_of_dimensions
+    if self.pml_cells is not None and len(self.pml_cells) != dimensions:
+        raise ValueError(f"pml_cells must contain {dimensions} thicknesses, one per spatial axis.")
+    thickness = []
+    for axis in range(dimensions):
+        periodic = self.lower_boundary_conditions[axis] == "periodic"
+        count = self.pml_cells[axis] if self.pml_cells is not None else (0 if periodic else 12)
+        if periodic and count:
+            raise ValueError("pml_cells must be zero on periodic axes.")
+        thickness.append((count, count))
+    if dimensions == 2:
+        thickness.append((0, 0))
+    parameters = self.picongpu_pml or PML()
+    # Use field values (not the rendering serializers for coefficient vectors).
+    return BackendPML(**dict(parameters), num_cells=tuple(thickness))
 
 
 def _normalise_type(kw, key, t):
@@ -99,7 +121,6 @@ def _reject_unsupported_cartesian_grid_features(self):
         self.upper_boundary_conditions_particles,
         self.upper_boundary_conditions,
     )
-    util.unsupported("pml cells", self.pml_cells)
 
 
 def _check_lower_bound_is_zero(self):
@@ -166,6 +187,7 @@ def _check_super_cell_size(self, dim_name):
     grid.Grid3D,
     preamble=lambda self: _check_cartesian_grid(self, ["x", "y", "z"]),
     conversions={
+        "pml": _convert_pml,
         "boundary_condition": lambda self: tuple(
             PICONGPU_BOUNDARY_CONDITION_BY_PICMI_ID[x] for x in self.lower_boundary_conditions
         ),
@@ -179,6 +201,8 @@ def _check_super_cell_size(self, dim_name):
     remove_prefix="picongpu_",
 )
 class Cartesian3DGrid(picmistandard.PICMI_Cartesian3DGrid):
+    pml_cells: list[CellCount] | None = None
+    picongpu_pml: PML | None = None
     # number of GPUs to distribute the grid over; whatever form is given, it
     # is normalized to a 3-tuple (see _normalise_n_gpus): a bare int N and [N]
     # both mean "parallelize over N GPUs in y", i.e. (1, N, 1)
@@ -258,6 +282,10 @@ class Cartesian3DGrid(picmistandard.PICMI_Cartesian3DGrid):
         )
         if self.guard_cells is not None:
             kwargs["guard_cells"] = self.guard_cells[:2]
+        if self.pml_cells is not None:
+            kwargs["pml_cells"] = self.pml_cells[:2]
+        if self.picongpu_pml is not None:
+            kwargs["picongpu_pml"] = self.picongpu_pml
         if self.picongpu_n_gpus != (1, 1, 1):
             kwargs["picongpu_n_gpus"] = self.picongpu_n_gpus[:2]
         if self.picongpu_grid_dist is not None:
@@ -271,6 +299,7 @@ class Cartesian3DGrid(picmistandard.PICMI_Cartesian3DGrid):
     grid.Grid2D,
     preamble=lambda self: _check_cartesian_grid(self, ["x", "y"]),
     conversions={
+        "pml": _convert_pml,
         "boundary_condition": lambda self: tuple(
             PICONGPU_BOUNDARY_CONDITION_BY_PICMI_ID[x] for x in self.lower_boundary_conditions
         ),
@@ -292,6 +321,8 @@ class Cartesian3DGrid(picmistandard.PICMI_Cartesian3DGrid):
     remove_prefix="picongpu_",
 )
 class Cartesian2DGrid(picmistandard.PICMI_Cartesian2DGrid):
+    pml_cells: list[CellCount] | None = None
+    picongpu_pml: PML | None = None
     # number of GPUs to distribute the grid over; whatever form is given, it
     # is normalized to a 2-tuple (see _normalise_n_gpus): a bare int N and [N]
     # both mean "parallelize over N GPUs in y", i.e. (1, N)

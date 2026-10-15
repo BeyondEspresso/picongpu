@@ -12,6 +12,7 @@ from pydantic import AfterValidator, BaseModel, Field, PlainSerializer, computed
 from typing_extensions import Self
 
 from .rendering import RenderedObject
+from .pml import PML, validate_grid_pml
 
 
 class BoundaryCondition(enum.Enum):
@@ -105,6 +106,12 @@ class Grid3D(BaseModel, RenderedObject):
     The bounding box is implicitly given as ``cell_size * cell_cnt`` per axis.
     """
 
+    pml: PML | None = None
+
+    @computed_field
+    def absorber(self) -> PML:
+        return self.pml if self.pml is not None else PML()
+
     cell_size: Annotated[Vec3_float, AfterValidator(lambda x: all_gt(x, 0))] = Field(alias="cell_size_si")
     """Width of individual cell in each direction"""
 
@@ -149,6 +156,7 @@ class Grid3D(BaseModel, RenderedObject):
     @model_validator(mode="after")
     def check(self) -> Self:
         """serialized representation provided for RenderedObject"""
+        validate_grid_pml(self)
         if self.grid_dist is not None:
             assert sum(self.grid_dist[0]) == self.cell_cnt[0], "sum of grid_dists in x must be equal to number_of_cells"
             assert sum(self.grid_dist[1]) == self.cell_cnt[1], "sum of grid_dists in y must be equal to number_of_cells"
@@ -166,6 +174,12 @@ class Grid2D(BaseModel, RenderedObject):
 
     Defined by the dimensions of each cell and the number of cells per axis.
     """
+
+    pml: PML | None = None
+
+    @computed_field
+    def absorber(self) -> PML:
+        return self.pml if self.pml is not None else PML()
 
     cell_size: Annotated[Vec2_float, AfterValidator(lambda x: all_gt(x, 0))] = Field(alias="cell_size_si")
     """Width of individual cell in each spatial direction"""
@@ -212,6 +226,7 @@ class Grid2D(BaseModel, RenderedObject):
     @model_validator(mode="after")
     def check(self) -> Self:
         """serialized representation provided for RenderedObject"""
+        validate_grid_pml(self)
         if self.grid_dist is not None:
             assert sum(self.grid_dist[0]) == self.cell_cnt[0], "sum of grid_dists in x must be equal to number_of_cells"
             assert sum(self.grid_dist[1]) == self.cell_cnt[1], "sum of grid_dists in y must be equal to number_of_cells"
