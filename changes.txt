@@ -1,0 +1,352 @@
+Allow positive TWTS centroid positions in the PICMI frontend
+
+The shared laser validator previously rejected centroid_y > 0 for every
+laser. TWTS computes its manual delay as (focal_y - centroid_y) / (beta0*c),
+so this prevented zero delay at a positive focal position.
+
+- All implementation changes are confined to the PICMI TWTSLaser class.
+  The shared validator and all backend laser models retain their original
+  implementation; Gaussian, dispersive and plane-wave lasers are unchanged.
+- TWTS overrides _validate_common_properties() to allow positive centroid
+  positions. It explicitly retains the three checks for normalized
+  polarization, normalized propagation and a positive propagation-y
+  component. This duplicates those short checks to keep the fix local.
+- TWTS returns pulse_init = 0.0 as an unused compatibility value for the
+  unchanged backend model. Its template uses TDELAY and the switching
+  window, not PULSE_INIT or RAMP_INIT, so this does not alter the TWTS field.
+  Deriving pulse_init from a positive centroid would instead produce a
+  negative value rejected by the backend.
+- Documented the TWTS timing semantics and added regression tests for
+  centroid-to-delay conversion, zero-delay template rendering with a
+  switching window, and preservation of the other laser restrictions.
+
+TWTS still uses its existing windowStart, windowEnd and windowLength
+parameters. Allowing a positive centroid does not initialize fields inside
+the domain: the switching window and propagation time determine how the
+boundary-injected field develops. Other setup-migration limitations are
+separate from the centroid change; the polarization fix is described below.
+
+Validation: syntax/whitespace checks and the initial 24 direct source-method
+checks passed. Task 1 subsequently passed all 35 TWTS/Gaussian Python tests
+in an isolated uv environment under /tmp, including five complete setup
+generation cases on the reference grid. Positive, zero and negative delays
+were checked for both incidence signs. The zero-delay setup was compared
+directly with the reference timing, window, geometry, grid, timestep and
+recorded incident-field/componentwise CMake options.
+
+Python dependencies were installed only in the temporary test environment.
+No PIConGPU C++ compilation, submission or simulation was performed. Timing
+tests initially used polarization angles of +/-45 degrees to isolate the
+polarization bug; they did not represent the complete migrated setup.
+See tweac5DegreeSetup/validation/TASK1.md for reproduction commands and scope.
+
+Correct the TWTS polarization axis (task 2)
+
+The z component of TWTSLaser.polarization_direction now uses sin(alpha),
+where alpha is polarizationAngle, instead of cos(alpha). In the transverse
+basis for k=(0,cos(phi),sin(phi)), the corrected direction is
+(cos(alpha), -sin(alpha)*sin(phi), sin(alpha)*cos(phi)). It is a unit vector
+orthogonal to k, including at the reference polarization angles. This is a
+local correction to TWTSLaser; no shared validator or other laser changes
+were needed. The scalar polarization angles and amplitudes sent to the C++
+TWTS field functors are unchanged.
+
+Added basis/sign, normalization and transversality regression coverage.
+The setup-generation tests now use the actual reference angles
+ +/-45.10716816968629 degrees and verify rendered angles, vectors and
+amplitudes. All 62 TWTS/Gaussian Python tests passed, including five full
+setup-generation cases with positive, zero and negative delays. Direct
+comparison with TwtsBackgroundLaser.param confirmed the original angles
+and a0=1.25. No PIConGPU C++ compilation or simulation was performed.
+See tweac5DegreeSetup/validation/TASK2.md for the derivation and validation.
+
+Expose the composite particle pusher (task 3)
+
+Added picmi.CompositePusher(first, second, switch_step), selected with the
+Species.picongpu_composite_pusher option. The names follow Species.method.
+The first pusher is active before switch_step and the second from that step
+onwards. The switch is an absolute, strict integer in the uint32 range;
+zero and steps beyond max_steps are supported. Omit method or set it to
+None when using the composite; an explicit method conflicts. Duplicate
+pusher types, unsupported names, extra options and nested composites are
+rejected. Duplicate types cannot be used as two bases in the C++ composite.
+
+The backend species accepts a single Pusher enum or a typed CompositePusher.
+Its computed pusher_cpp value renders the corresponding C++ type without
+accepting arbitrary C++ input. Fixed the backend Higuera enum value to
+HigueraCary; the public PICMI spelling remains Higuera-Cary. Removed the
+other:Axel mapping and backend enum member because no C++ Axel pusher exists
+in this checkout. All remaining enum values were checked against actual
+declarations in pusher.unitless. Existing supported single pushers retain
+their types, with the corrected HigueraCary spelling; default remains Boris.
+
+Added public parameter documentation and 52 focused Python tests. Together
+with existing species and TWTS/Gaussian tests, all 139 tests (and 12 subtests)
+passed. Setup generation at switch steps 0 and 6720 retained the active grid,
+device decomposition and max_steps=1000. Direct comparison with the reference
+species.param confirmed the exact Free/HigueraCary composite at step 6720.
+Only Python setup generation and source inspection were performed; no C++
+compilation, job submission or simulation. These isolated cases are not the
+complete migrated setup. See tweac5DegreeSetup/validation/TASK3.md.
+
+Keep field interpolation consistent with species shape (task 4)
+
+The species template previously used the global UsedField2Particle alias,
+which selects TSC in the default species.param even when a species requests
+cubic/PQS. It now defines one ParticleShape_species_<name> alias per species
+and uses it in both the shape flag and
+FieldToParticleInterpolation<..., AssignedTrilinearInterpolation>. Different
+species can therefore gather fields with different shapes. No global alias
+or new PICMI parameter is needed. Omitted/None species shapes remain TSC.
+Current deposition still uses UsedParticleCurrentSolver and is task 5.
+
+Source inspection showed Counter is a diagnostic-only shape with zero support
+and no cached shapeArray interface. Backend species validation now rejects it
+with a clear error, including PICMI conversion of other:counter, rather than
+rendering an incompatible field interpolation. The enum remains available;
+the restriction applies to using Counter as a species' interpolation shape.
+
+Added 12 Python tests covering supported interpolation shapes, PICMI/backend
+defaults, Counter rejection, mixed-species rendering and full input generation.
+The mixed-species regression failed before the template fix. All 151 selected
+tests and 12 subtests passed after the change, including the earlier species,
+composite-pusher and TWTS/Gaussian regressions. Generation preserved the active
+grid, device decomposition and 1000-step limit. Resolving the generated electron
+shape alias matched the reference PQS interpolation exactly; the step-6720
+composite pusher was also retained. No PIConGPU C++ compilation or simulation
+was performed. See tweac5DegreeSetup/validation/TASK4.md for scope and commands.
+
+Expose per-species current deposition (task 5)
+
+Added the PIConGPU-specific Species.picongpu_current_deposition option,
+accepting "Esirkepov" (default), "EmZ" or its alias "EZ". PICMI conversion stores a
+CurrentDeposition enum in the backend species. The species template now
+renders currentSolver::<algorithm><ParticleShape_species_<name>>, using the
+same alias as the shape flag and field interpolation instead of the global
+UsedParticleCurrentSolver. Default inputs still produce Esirkepov<TSC>;
+cubic shape alone now produces Esirkepov<PQS>, and cubic with "EmZ" produces
+the reference EmZ<PQS>. The existing C++ default deposition strategy is used.
+
+Both algorithms accept CIC/TSC/PQS/PCS. Esirkepov also accepts NGP. Backend
+validation rejects EmZ with NGP: its support-one shape makes the EmZ current
+component loops empty (Jx/Jy in 2D, all components in 3D). Counter remains
+invalid as a species shape. Invalid algorithm names, None
+and arbitrary C++ expressions are rejected. Deposition choice is independent
+of particle pusher and binomial current smoothing. No C++ algorithms changed.
+
+Added public documentation and 30 Python tests for allowed combinations,
+invalid inputs, default rendering, serialization and mixed-species generation.
+All 181 selected tests and 12 subtests passed, including earlier migration
+regressions. Generated setups with smoothing enabled/disabled retain the
+active grid, device decomposition and 1000-step limit. Direct comparison
+with the reference confirmed PQS shape, PQS interpolation, EmZ<PQS> and the
+step-6720 composite pusher. No PIConGPU compilation or simulation occurred.
+See tweac5DegreeSetup/validation/TASK5.md for reproduction and limitations.
+
+Accept EZ as an alias for EmZ
+
+The PICMI species option now also accepts "EZ", matching the paper's name
+and the C++ alias. CurrentDeposition normalizes "EZ" to its existing EmZ
+enum value, including direct backend construction. Both spellings therefore
+use identical validation, serialized metadata and generated C++ types.
+The default remains Esirkepov. Added alias-equivalence, supported-shape,
+invalid-combination and setup-generation coverage for the EZ spelling.
+All 40 deposition tests passed, including four Python setup generations.
+No PIConGPU compilation or simulation was performed.
+
+Expose custom PML thickness and coefficients (task 6)
+
+Both Cartesian grids now support standard PICMI pml_cells (one integer per
+axis, used on both faces). The new PIConGPU extension picongpu_pml=picmi.PML(...)
+configures sigma/kappa grading, the optimal-conductivity multiplier, kappa
+maxima, alpha grading and alpha maxima. A shared typed coefficient model feeds
+the backend; fieldAbsorber.param generation retains defaults when omitted and
+keeps conductivity dependent on each axis's actual cell size. N.cfg explicitly
+selects --fieldAbsorber pml. No C++ implementation changed.
+
+Validation rejects invalid coefficient ranges, noninteger/negative thickness,
+nonzero thickness on periodic axes, layers exceeding local GPU domains and
+active incident-field surfaces too close to configured PML. Inactive Huygens
+surfaces are preserved, including the reference's distant YMax. to_2d() retains
+coefficients and x/y thicknesses. Existing C++ checks still handle further
+incident-field stencil constraints at GPU interfaces.
+
+All 274 selected Python tests and 12 subtests passed, including 40 PML tests.
+After correcting the template namespace footer, all 40 PML tests passed again
+with added closure checks. Default and custom setup generation and a direct
+reference comparison confirmed active PML constants, axis-dependent conductivity
+formulas and unchanged Huygens positions. The combined case preserves the active
+grid, 1000 steps, both TWTS pulses and PQS/EmZ electrons with the composite pusher.
+Inactive exponential coefficients retain C++ defaults rather than the reference's
+unused custom values. No PIConGPU compilation or simulation was performed.
+See tweac5DegreeSetup/validation/TASK6.md and the grids-and-solvers documentation.
+
+Expose minimum macroparticle weighting (task 7)
+
+Added Simulation.picongpu_min_weighting, a PIConGPU extension defaulting to 1.0.
+It passes through backend Simulation.min_weighting to the MIN_WEIGHTING
+constant in particle.param. The reference setup can now select 0.1 without
+changing density normalization, species layout or initialization algorithms.
+Both Python models reject zero, negative/nonfinite values, None, booleans and
+numeric strings. The C++ WeightMacroParticles algorithm explicitly requires
+positivity and divides by MIN_WEIGHTING. Backend validation additionally
+rejects underflow to zero or overflow in the selected 32-bit core precision.
+
+All 337 selected Python tests and 12 subtests passed, including 30 new weighting
+tests. Default/custom input generations preserve the active grid and 1000 steps;
+all generated parameter headers are identical except the weighting constant.
+Direct reference comparison confirms MIN_WEIGHTING=0.1, base density 1e25 and
+one typical particle per cell. Python transcriptions of the inspected C++
+algorithm check neighboring threshold values and representative ramp cells in
+float32 and float64. No PIConGPU compilation or simulation was performed.
+See tweac5DegreeSetup/validation/TASK7.md and the simulation-settings documentation.
+
+Expose phase-space output extension (task 8)
+
+Added optional PhaseSpace.picongpu_extension, converted to backend extension
+and rendered as --<species>_phaseSpace.ext. Omission/None retains the C++ default.
+Both models validate a bare extension token; backend availability is left to
+the eventual openPMD installation. Existing SI-to-m_species*c conversion is
+unchanged. No C++ code changed.
+
+Source inspection confirms extension selection is per diagnostic, with one
+option vector per species shared across filters. Different explicit formats
+are supported. The backend simulation rejects an omitted extension before a
+later explicit extension for the same species: the CLI has no default placeholder
+and would otherwise apply that value to the wrong diagnostic. Trailing defaults
+are supported without reordering diagnostics or guessing a backend default.
+
+All 405 selected Python tests and 3501 subtests passed, including 41 new extension
+tests. Python input generation preserves the active grid and 1000 steps. Direct
+comparison confirms all seven reference phase spaces, SI-converted momentum
+bounds, all filters, explicit bp output and the 812-step period. The unused eighth
+extension in the reference aggregate is unnecessary; seven explicit values are
+generated. No PIConGPU compilation or simulation was performed.
+See tweac5DegreeSetup/validation/TASK8.md and the phase-space documentation.
+
+Assemble the core tweac5DegreeSetup PICMI definition (task 9a)
+
+Added tweac5DegreeSetup/picmi_setup.py with build_simulation() and an explicit
+Python-only generation entry point. It defaults to the active 1000 steps and
+preserves the grid, decomposition, numerical methods, cold electrons, PML,
+both TWTS pulses, incident faces, memory settings and exact analytic density
+branches. SymPy constants retain 17 digits to preserve hard-cut boundaries
+during Python evaluation. Generation uses standard templates and writes outside
+the reference directory. Reference outputs remain for tasks 9b and 9c.
+
+The existing memory serializer rendered the 4 GiB reserve as an overflowing
+unsuffixed C++ int multiplication. Large values now use a ULL first factor;
+default/smaller expressions are unchanged. Five regression cases cover this.
+
+All 268 selected Python tests passed, including six core acceptance tests and
+1352 source-based density sample comparisons. Tests resolve generated parameter
+aliases, inherited laser values, and compare memory and PML against the active
+reference. The CLI also generated the core input. No PIConGPU compilation or
+simulation was performed. Added README_PICMI.md and validation/TASK9A.md with
+commands, scope and remaining differences. Density arithmetic is analytically
+equivalent but does not claim identical float_X intermediate rounding; this and
+remaining runtime-option differences are recorded for the final audit in 9d.
+
+Add active runtime diagnostics to the migration (task 9b)
+
+The Python definition now adds field/electron energy, all seven PhaseSpace
+outputs, full fields, three field slices and checkpoints with the active periods,
+filters, ranges, filenames and compression. Bounded schedules follow --steps;
+the default remains 1000 with the original grid. Binning eSpec remains task 9c.
+
+The inherited fields_all also contains electron charge and kinetic-energy
+density. DerivedFieldDump now accepts PIConGPU-specific ChargeDensity and
+EnergyDensity selectors that reuse the existing C++ implementations, preserving
+weighting, deposition and units. Registration is restricted to each requested
+species/filter and deduplicated across output files. Custom functors are unchanged.
+
+OpenPMDConfig now accepts inline backend dictionaries/strings. Fixed its rejection
+of RangeSpec instances and serialization of unrestricted axes: ':' is required
+because the C++ range parser skips empty entries, otherwise moving Y/Z slices
+onto X. Compression is embedded reproducibly in the generated TOML files.
+
+All 131 selected Python tests and 3489 subtests passed, including comparisons
+with the active reference at 1000, 230000 and zero steps. The CLI also generated
+input. No PIConGPU compilation or simulation occurred. See validation/TASK9B.md
+under tweac5DegreeSetup and the updated openPMD documentation for details.
+
+Add the Binning electron spectrometer (task 9c)
+
+Added electron_spectrometer() to picmi_setup.py using the existing Binning and
+ParticleFunctor interfaces. It reproduces eSpec: 1600 energy bins over 0–1000 MeV,
+256 pointing bins over -0.1–0.1 rad, overflow bins on both axes, signed charge
+deposition, a 500-step period and the separate bp/chunks:auto backend settings.
+Energy divides the weighted KinEnergy result by weighting once; charge is already
+weighted and is deposited directly. Pointing remains atan2(px,py). All functors
+use float_X and preserve reference dimensions and axis ordering.
+
+Source inspection confirms the reference's default dumpPeriod=0 and explicit
+PICMI dumpPeriod=1 both dump/reset each notification. Output contains raw charge
+per bin, without bin-width or time normalization. No library or template changes
+were needed. Added test_binning.py and validation/TASK9C.md, and updated the README
+and TODO. All 59 migration acceptance tests passed, including 41 new Binning
+checks, and the CLI generated the complete diagnostic configuration at 1000 steps.
+No network access, installation, PIConGPU compilation or simulation occurred.
+Task 9d remains for the final migration audit and remaining runtime differences.
+
+Complete the migration audit (task 9d)
+
+Added optional Simulation.picongpu_auto_adjust_grid and picongpu_progress_percent,
+with strict frontend/backend validation and N.cfg rendering. Omission retains
+C++ defaults; explicit False is preserved as --autoAdjustGrid false. The setup
+now records this and --percent 1, matching the remaining reference runtime flags.
+These are PIConGPU extensions; no C++ code or setup-specific templates changed.
+
+Final source/runtime comparisons cover all active parameter files, inherited
+field outputs, all diagnostics, and the unchanged single temporary field slot.
+Generation tests prohibit subprocess execution and simulation entry points and
+guard against reading/scanning the reference build and binaries. Imports and
+construction are checked for filesystem writes. The active 1000-step window
+stays before the plasma start, so the previously documented mixed-precision
+density rounding difference has no effect in this run. Longer plasma runs retain
+that numerical caveat; bitwise device equivalence is not claimed.
+
+All 471 selected tests and 3497 subtests passed (64 migration tests and 27 runtime
+control regressions included). The final CLI artifact is /tmp/tweac-picmi-final.
+Updated the public documentation, README, TODO and validation/TASK9D.md with the
+complete comparison table, exact commands and limitations. Tasks 9d and 9 are
+complete for the agreed Python-generation scope. No network access, installation,
+PIConGPU compilation, cluster submission or simulation occurred.
+
+Correction to final audit: setup-local TWTS header override missed
+
+The reference includes fields/background/templates/twtstight/TWTSTight.hpp with
+float_T=float_64 and numSigmas=8. The generated setup instead uses repository
+float_X (32-bit here) and 6. The final inventory only checked param/*.param and
+missed this active implementation override. Previous passing tests remain valid
+for their coverage but do not establish complete migration. Reopened tasks 9/9d,
+added focused task 9e, and corrected README/TASK9D.md. No numerical implementation
+was changed. TWTS-only parameterization is proposed; newer numerical algorithms
+have not been shown to make the override redundant.
+
+Preserve TWTS internal precision and cutoff through precision.param (task 9e)
+
+Added shared TWTSTight controls to the existing precision.param:
+PICONGPU_TWTS_PRECISION (0 follows core, or 32/64) and PICONGPU_TWTS_NUM_SIGMAS
+(positive uint32_t cutoff). Guarded defaults retain core arithmetic and cutoff 6,
+including for old custom precision.param files without the new definitions.
+TWTSTight.hpp consumes these settings for float_T and numSigmas. No new param
+file, copied implementation, formula change or TWTSPulse.def change is needed.
+Both incident and background TWTS consumers share the settings; returned fields,
+amplitude scaling and switching-window arithmetic retain float_X.
+
+Extended frontend/backend PrecisionConfig and the precision.param template.
+The final setup selects picmi.PrecisionConfig(twts=64, twts_num_sigmas=8), matching
+the reference's header override while retaining the float32 core, active grid,
+1000-step default and componentwise incident-field injection. These controls are
+PIConGPU extensions, with independent precision and cutoff validation.
+
+Expanded the inventory to all 18 reference include files and added a normalized
+full-header comparison after resolving the settings. Added default, validation,
+conversion, rendering and source/include compatibility checks. All 510 selected
+tests and 3497 subtests passed, including 66 migration checks. The standalone CLI
+generated /tmp/tweac-picmi-final. Updated public docs, README, TODO and TASK9D.md;
+TASK9E.md records the correction and final acceptance. Tasks 9e/9d/9 are complete
+within the Python-generation scope. The temporary Python environment was recreated
+using uv and downloaded dependencies; no full PIConGPU toolchain was installed,
+and no C++ compilation, simulation or job submission occurred.

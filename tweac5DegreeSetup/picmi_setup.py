@@ -1,7 +1,8 @@
-"""PICMI migration of the active tweac5DegreeSetup (tasks 9a–9c).
+"""PICMI definition of the active 1000-step tweac5DegreeSetup.
 
 Generate input only: python picmi_setup.py /path/to/new-output-directory
-The final migration audit remains task 9d. No C++ template overrides.
+Generates input only, including all active diagnostics. No C++ template overrides.
+See README_PICMI.md and validation/TASK9D.md / TASK9E.md for acceptance and limitations.
 """
 
 import argparse
@@ -248,7 +249,10 @@ def build_simulation(max_steps=DEFAULT_STEPS):
         picongpu_min_weighting=0.1,
         picongpu_moving_window_move_point=0.0,
         picongpu_precision=32,
+        picongpu_precision_config=picmi.PrecisionConfig(twts=64, twts_num_sigmas=8),
         picongpu_walltime=timedelta(hours=2),
+        picongpu_auto_adjust_grid=False,
+        picongpu_progress_percent=1,
         picongpu_memory_config=picmi.MemoryConfig(
             reserved_gpu_memory_size=4 * GiB,
             bytes_exchange_x=32 * MiB,
@@ -293,7 +297,7 @@ def main():
     parser.add_argument("--steps", type=int, default=DEFAULT_STEPS, help="default: active 1000-step run")
     args = parser.parse_args()
     output = generate(args.output_directory, args.steps)
-    print(f"Generated input at {output}, including Binning eSpec. Final migration audit remains task 9d.")
+    print(f"Generated input at {output} for {args.steps} steps, including all active diagnostics. No build or run.")
 
 
 if __name__ == "__main__":
