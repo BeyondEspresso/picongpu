@@ -6,7 +6,7 @@ License: GPLv3+
 """
 
 import re
-from pydantic import BaseModel, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 from enum import Enum
 
 from picongpu.pypicongpu.species.constant.synchrotron import SynchrotronConstant
@@ -36,14 +36,30 @@ class Pusher(Enum):
     # supported by standard and PIConGPU
     Boris = "Boris"
     Vay = "Vay"
-    Higuera = "Higuera-Cary"
+    Higuera = "HigueraCary"
     Free = "Free"
     # not supported by standard
     ReducedLandauLifshitz = "ReducedLandauLifshitz"
     Acceleration = "Acceleration"
     Photon = "Photon"
     Probe = "Probe"
-    Axel = "Axel"
+
+
+class CompositePusher(BaseModel):
+    """Two distinct C++ pushers, switching at an absolute uint32 timestep."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    first: Pusher
+    second: Pusher
+    switch_step: int = Field(strict=True, ge=0, le=2**32 - 1)
+
+    @model_validator(mode="after")
+    def _distinct_pushers(self):
+        # The C++ composite inherits from both types; duplicate bases are invalid.
+        if self.first == self.second:
+            raise ValueError("CompositePusher requires two distinct pushers.")
+        return self
 
 
 class Constants(BaseModel):
@@ -161,7 +177,19 @@ class Species(RenderedObject, BaseModel):
     attributes: list[Attribute]
     """PIConGPU particle attributes"""
 
-    pusher: Pusher = Pusher["Boris"]
+    pusher: Pusher | CompositePusher = Pusher["Boris"]
+
+    @computed_field
+    def pusher_cpp(self) -> str:
+        """C++ type assembled only from validated pusher choices."""
+        namespace = "particles::pusher::"
+        if isinstance(self.pusher, CompositePusher):
+            return (
+                f"{namespace}Composite<{namespace}{self.pusher.first.value}, "
+                f"{namespace}{self.pusher.second.value}, "
+                f"{namespace}CompositeBinarySwitchActivationFunctor<{self.pusher.switch_step}>>"
+            )
+        return namespace + self.pusher.value
 
     name: str
     """name of the species"""

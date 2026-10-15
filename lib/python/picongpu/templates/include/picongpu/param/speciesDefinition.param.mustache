@@ -86,7 +86,7 @@ namespace picongpu
                 {{/synchrotron}}
             {{/constants}}
 
-            particlePusher<{{#pusher}}particles::pusher::{{{pusher}}}{{/pusher}}{{^pusher}}UsedParticlePusher{{/pusher}}>,
+            particlePusher<{{{pusher_cpp}}}>,
             shape<{{#shape}}particles::shapes::{{{shape}}}{{/shape}}{{^shape}}UsedParticleShape{{/shape}}>,
             interpolation<UsedField2Particle>,
             current<UsedParticleCurrentSolver>>;

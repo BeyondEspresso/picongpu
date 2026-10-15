@@ -14,6 +14,7 @@ from picmistandard import PICMI_Species
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     PrivateAttr,
     computed_field,
     field_validator,
@@ -30,6 +31,7 @@ from picongpu.pypicongpu.species.constant.densityratio import DensityRatio
 from picongpu.pypicongpu.species.constant.mass import Mass
 from picongpu.pypicongpu.species.operation import AnyOperation
 from picongpu.pypicongpu.species.species import Pusher, Shape
+from picongpu.pypicongpu.species.species import CompositePusher as PyPIConGPUCompositePusher
 from picongpu.pypicongpu.species.species import Species as PyPIConGPUSpecies
 
 from .. import pypicongpu
@@ -66,7 +68,6 @@ _PUSHER_BY_NAME: Mapping[str, Pusher] = MappingProxyType(
         "other:Acceleration": Pusher.Acceleration,
         "other:Photon": Pusher.Photon,
         "other:Probe": Pusher.Probe,
-        "other:Axel": Pusher.Axel,
     }
 )
 
@@ -79,6 +80,39 @@ def _lookup(kind: str, table: Mapping[str, Any], key: str):
         return table[key]
     except KeyError:
         raise ValueError(f"PIConGPU does not support {kind} {key!r}. Supported: {', '.join(table)}.") from None
+
+
+class CompositePusher(BaseModel):
+    """Use ``first`` before ``switch_step``, then ``second`` from that step.
+
+    Pusher names follow Species.method. Both must be supported and distinct.
+    The switching step is an absolute timestep, an integer in [0, 2**32 - 1].
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    first: str
+    second: str
+    switch_step: int = Field(strict=True, ge=0, le=2**32 - 1)
+
+    @field_validator("first", "second")
+    @classmethod
+    def _supported_method(cls, value):
+        _lookup("pusher method", _PUSHER_BY_NAME, value)
+        return value
+
+    @model_validator(mode="after")
+    def _validate_composite(self):
+        # Validate C++ restrictions in the backend, shared with direct backend users.
+        self.get_as_pypicongpu()
+        return self
+
+    def get_as_pypicongpu(self) -> PyPIConGPUCompositePusher:
+        return PyPIConGPUCompositePusher(
+            first=_lookup("pusher method", _PUSHER_BY_NAME, self.first),
+            second=_lookup("pusher method", _PUSHER_BY_NAME, self.second),
+            switch_step=self.switch_step,
+        )
 
 
 class Species(PICMI_Species):
@@ -94,8 +128,11 @@ class Species(PICMI_Species):
     `method` accepts the PICMI-standard pusher methods ('Boris', 'Vay',
     'Higuera-Cary', 'Li', 'free-streaming', 'LLRK4') and PIConGPU-specific
     pushers prefixed with 'other:' (e.g. 'other:Acceleration',
-    'other:Photon', 'other:Probe', 'other:Axel'). If left unset it falls back
+    'other:Photon', 'other:Probe'). If left unset it falls back
     to the PIConGPU default 'Boris'.
+
+    `picongpu_composite_pusher` selects a CompositePusher instead of `method`.
+    Omit `method` or set it to None when using this option.
     """
 
     # PIConGPU's native default particle shape (TSC). This is the code-level
@@ -107,6 +144,13 @@ class Species(PICMI_Species):
     picongpu_fixed_charge: bool = False
     particle_shape: str | None = None
     method: str | None = None
+    picongpu_composite_pusher: CompositePusher | None = None
+
+    @model_validator(mode="after")
+    def _check_pusher_choice(self):
+        if self.picongpu_composite_pusher is not None and self.method is not None:
+            raise ValueError("picongpu_composite_pusher and method cannot both be specified; omit method or use None.")
+        return self
 
     # Theoretically, Position(), Momentum() and Weighting() are also requirements imposed from the outside,
     # e.g., by the current deposition, pusher, ..., but these concepts are not separately modelled in PICMI
@@ -207,7 +251,11 @@ class Species(PICMI_Species):
     def _shape(self, default_particle_shape: str | None = None) -> Shape:
         return _lookup("particle shape", _SHAPE_BY_NAME, self._resolved_particle_shape(default_particle_shape))
 
-    def _pusher(self) -> Pusher:
+    def _pusher(self) -> Pusher | PyPIConGPUCompositePusher:
+        # PICMI objects are mutable; also catch conflicts introduced after construction.
+        self._check_pusher_choice()
+        if self.picongpu_composite_pusher is not None:
+            return self.picongpu_composite_pusher.get_as_pypicongpu()
         return _lookup("pusher method", _PUSHER_BY_NAME, self.method or "Boris")
 
     def _resolved_particle_shape(self, default_particle_shape: str | None = None) -> str:

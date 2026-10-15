@@ -62,6 +62,9 @@ Its most important parameters are:
   the particle pusher (default ``"Boris"``;
   ``"Vay"`` and ``"Higuera-Cary"`` are relativistic variants,
   ``"LLRK4"`` adds radiation reaction).
+* ``picongpu_composite_pusher``:
+  a :class:`~picongpu.picmi.species.CompositePusher` selecting two pushers
+  and an absolute timestep at which to switch between them (see below).
 * ``density_scale``:
   rescales the species' density relative to a shared profile
   (see below).
@@ -122,6 +125,48 @@ The value at each position of ``proportions`` becomes the corresponding member's
    :class:`~picongpu.picmi.species.Species` entry becomes its own operation.
    There is therefore no implicit merging of look-alike species: to initialise
    species collectively, you must group them in a ``MultiSpecies``.
+
+Composite particle pusher
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To stream freely initially and use Higuera--Cary from step 6720 onwards:
+
+.. code-block:: python
+
+   electrons = picmi.Species(
+       name="e",
+       particle_type="electron",
+       picongpu_composite_pusher=picmi.CompositePusher(
+           first="free-streaming",
+           second="Higuera-Cary",
+           switch_step=6720,
+       ),
+   )
+
+``first`` is active for ``currentStep < switch_step``; ``second`` is active
+from ``switch_step`` onwards. ``switch_step`` is an absolute simulation step,
+not a duration. It must be an integer from 0 through ``2**32 - 1`` (the C++
+``uint32_t`` range); floats, strings and booleans are rejected. A switch at
+zero selects the second pusher immediately. A switch beyond ``max_steps``
+is retained, so a 1000-step run can still specify the switch at 6720.
+
+The two pushers must be distinct because the C++ composite inherits from
+both types. Each name uses the same spelling as ``Species.method``:
+``"Boris"``, ``"Vay"``, ``"Higuera-Cary"``, ``"free-streaming"``,
+``"LLRK4"``, ``"other:Acceleration"``, ``"other:Photon"`` or
+``"other:Probe"``. Nested composites and arbitrary C++ expressions are not
+supported. ``"Li"`` and ``"other:Axel"`` have no implementation in this
+checkout and are rejected during conversion for a single pusher, or during
+construction of a composite. These choices do not validate the physical
+suitability of a pusher for a particular species.
+
+When using ``picongpu_composite_pusher``, omit ``method`` or set it to
+``None``. An explicit non-``None`` method, including ``"Boris"``, conflicts
+with the composite and raises an error. Without a composite, omitting
+``method`` or setting it to ``None`` still selects Boris.
+
+The PICMI name ``"Higuera-Cary"`` maps to the C++ type
+``particles::pusher::HigueraCary`` for both single and composite pushers.
 
 .. _distributions:
 
