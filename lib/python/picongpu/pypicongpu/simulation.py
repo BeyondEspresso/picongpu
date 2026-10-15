@@ -6,6 +6,7 @@ License: GPLv3+
 """
 
 import math
+import struct
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -123,7 +124,7 @@ class Simulation(RenderedObject, BaseModel):
 
     min_weighting: Annotated[
         float, BeforeValidator(_default_min_weighting), AfterValidator(_validate_min_weighting)
-    ] = 10.0
+    ] = Field(default=10.0, strict=True)
     """
     minimum macro-particle weighting below which particles are not created / are deleted, unit: none
 
@@ -145,6 +146,21 @@ class Simulation(RenderedObject, BaseModel):
 
     memory_config: MemoryConfig = MemoryConfig()
     """memory / exchange-buffer knobs rendered into ``memory.param`` (see ``MemoryConfig``)."""
+
+    @model_validator(mode="after")
+    def _check_min_weighting_precision(self):
+        # MIN_WEIGHTING is float_X. A positive Python float must not become
+        # zero or overflow when the generated constant uses single precision.
+        if self.precision == 32:
+            try:
+                value = struct.unpack("f", struct.pack("f", self.min_weighting))[0]
+            except OverflowError as exc:
+                raise ValueError("min_weighting must remain finite in the selected precision (32 bits).") from exc
+            if not math.isfinite(value):
+                raise ValueError("min_weighting must remain finite in the selected precision (32 bits).")
+            if value == 0:
+                raise ValueError("min_weighting must remain positive in the selected precision (32 bits).")
+        return self
 
     @model_validator(mode="after")
     def _check_pml_injection(self):
