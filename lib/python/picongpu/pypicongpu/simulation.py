@@ -24,6 +24,7 @@ from pydantic import (
 from picongpu.pypicongpu.collisions import CollisionalPhysicsSetup
 from picongpu.pypicongpu.output.radiation import RadiationPlugin
 from picongpu.pypicongpu.output.phase_space import validate_extension_order
+from picongpu.pypicongpu.output.openpmd_plugin import FieldDump
 from picongpu.pypicongpu.output.timestepspec import TimeStepSpec
 from picongpu.pypicongpu.particle_functor.particle_functor import ParticleFunctor
 from picongpu.pypicongpu.species.constant.synchrotron import SynchrotronParams
@@ -210,6 +211,23 @@ class Simulation(RenderedObject, BaseModel):
         if not any(isinstance(o, RadiationPlugin) for o in outputs):
             return outputs + default
         return outputs
+
+    @computed_field
+    def builtin_derived_fields(self) -> list[dict[str, Any]]:
+        """Compile each built-in field once, even when several files select it."""
+        species_types = {species.name: species.typename for species in self.species}
+        fields = {}
+        for plugin in self.output or []:
+            if not isinstance(plugin, OpenPMDPlugin):
+                continue
+            for _, source in plugin.sources:
+                if isinstance(source, FieldDump) and source.builtin_attribute is not None:
+                    fields[source.name] = {
+                        "attribute": source.builtin_attribute,
+                        "species_typename": species_types[source.species_name],
+                        "filtername": source.filtername,
+                    }
+        return list(fields.values())
 
     @field_serializer("customuserinput")
     def _render_custom_user_input_list(self, value) -> dict[str, Any] | None:

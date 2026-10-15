@@ -29,6 +29,13 @@ all parameterized by the same :class:`~picongpu.picmi.diagnostics.OpenPMDConfig`
    The field name is derived from the species, the optional filter
    and the functor name.
 
+   PIConGPU also accepts the built-in selectors ``"ChargeDensity"`` and
+   ``"EnergyDensity"`` as ``functor`` values. These use the existing C++
+   deposition attributes and retain the species and optional particle filter.
+   For example, ``DerivedFieldDump(species=electrons,
+   functor="ChargeDensity")`` emits an electron charge-density field.
+   These selectors are PIConGPU extensions, not PICMI-standard names.
+
 .. literalinclude:: ../../snippets/selected_topics/openpmd.py
    :language: python
    :start-at: @ParticleFunctor(name="kineticEnergy")
