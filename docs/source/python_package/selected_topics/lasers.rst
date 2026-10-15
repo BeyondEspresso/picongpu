@@ -38,9 +38,16 @@ All lasers share a few properties:
   The propagation direction must point *into* the simulation box,
   i.e. have a positive ``y`` component.
 * ``centroid_position``: the position of the pulse at time zero.
-  It must be *outside* of the simulation box
+  For Gaussian, dispersive and plane-wave lasers it must be upstream of the simulation box
   (``centroid_position[1] <= 0``),
   so that the pulse enters the box during the simulation.
+  ``TWTSLaser`` instead uses its y coordinate to set a manual delay
+  ``(focal_position[1] - centroid_position[1]) / (beta0 * c)``;
+  positive centroid y coordinates are allowed, and setting it equal to the
+  focal y coordinate gives zero delay.
+  This does not initialize the corresponding fields inside the domain:
+  choose the TWTS switching window (``windowStart``, ``windowEnd``,
+  ``windowLength``) and allow time for the boundary-injected field to establish itself.
 * the field amplitude, given by exactly one of
   ``a0`` (the normalized vector potential) or
   ``E0`` (the peak electric field in V/m);
@@ -69,8 +76,15 @@ Laser types
 :class:`~picongpu.picmi.lasers.TWTSLaser`
    An obliquely incident, pulse-front-tilted Gaussian pulse
    for traveling-wave Thomson-scattering setups;
-   ``laserIncidenceAngle`` and ``polarizationAngle`` parameterize
-   the incidence relative to the ``y`` axis.
+   ``laserIncidenceAngle`` is the incidence angle relative to the ``y`` axis.
+   With incidence angle ``phi`` and polarization angle ``alpha`` (both in
+   radians), the nominal transverse polarization axis is
+   ``(cos(alpha), -sin(alpha)*sin(phi), sin(alpha)*cos(phi))``.
+   It is normalized and perpendicular to the propagation direction
+   ``(0, cos(phi), sin(phi))``: zero polarization angle selects the x axis,
+   and a right angle selects the transverse axis in the yz plane.
+   The scalar ``polarizationAngle`` is passed unchanged to the C++ TWTS
+   field functor, which handles the field rotation for negative incidence.
 
 :class:`~picongpu.picmi.lasers.PlaneWaveLaser`
    A plane wave with a temporal shape.

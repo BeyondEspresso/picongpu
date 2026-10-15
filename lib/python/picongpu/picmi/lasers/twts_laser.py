@@ -8,6 +8,7 @@ License: GPLv3+
 import math
 from collections.abc import Sequence
 
+import numpy as np
 from picmistandard import PICMI_Laser, resolve_once
 from pydantic import Field, computed_field, model_validator
 
@@ -40,6 +41,10 @@ class TWTSLaser(PICMI_Laser, BaseLaser):
         3D coordinates of the laser focus [m]
     centroid_position: list[float]
         3D coordinates of the initial laser centroid [m]
+        Its y coordinate sets the manual time delay relative to the focus and
+        may be positive. This does not initialize fields in the domain at t=0;
+        the user must choose a suitable incident-field switching window and
+        allow time for the injected field to propagate into the domain.
     focus_lateral_offset_si: float
         Offset from the middle of the simulation domain to the laser focus [m]
     a0: float, optional
@@ -75,7 +80,12 @@ class TWTSLaser(PICMI_Laser, BaseLaser):
 
     @computed_field
     def pulse_init(self) -> float:
-        return self._compute_pulse_init()
+        """Unused compatibility value required by the common backend model.
+
+        The TWTS template uses TDELAY and the switching window, not PULSE_INIT
+        or RAMP_INIT. Do not derive this value from the centroid position.
+        """
+        return 0.0
 
     @computed_field
     def k0(self) -> float:
@@ -92,10 +102,17 @@ class TWTSLaser(PICMI_Laser, BaseLaser):
 
     @computed_field
     def polarization_direction(self) -> list[float]:
+        # For k=(0, cos(phi), sin(phi)), the transverse basis is
+        # ex=(1, 0, 0), e_perp=(0, -sin(phi), cos(phi)). The nominal linear
+        # polarization axis is cos(alpha)*ex + sin(alpha)*e_perp.
+        # For negative phi, TWTSTight rotates the positive-|phi| beam by pi
+        # around y (EField.tpp); its vector is the negative of this equivalent
+        # axis representative. The field functor uses the unchanged scalar
+        # polarizationAngle, so this metadata does not change the field phase.
         return [
             math.cos(self.polarizationAngle),
             -math.sin(self.polarizationAngle) * math.sin(self.laserIncidenceAngle),
-            math.cos(self.polarizationAngle) * math.cos(self.laserIncidenceAngle),
+            math.sin(self.polarizationAngle) * math.cos(self.laserIncidenceAngle),
         ]
 
     @computed_field
@@ -105,6 +122,33 @@ class TWTSLaser(PICMI_Laser, BaseLaser):
     @computed_field
     def time_offset_si(self) -> float:
         return (self.focal_position[1] - self.centroid_position[1]) / (self.beta0 * constants.c)
+
+    def _validate_common_properties(self):
+        """Validate TWTS directions independently of the incoming-pulse model.
+
+        TWTS uses a manual TDELAY and a separate incident-field time window.
+        Its centroid sets the analytic pulse's time origin, not an initial
+        field distribution, so the base validator's y <= 0 restriction does
+        not apply. Keep the direction checks without calling that validator.
+        """
+        if not np.allclose(n := np.linalg.norm(self.polarization_direction), 1):
+            raise ValueError(
+                "The polarization direction vector must be normalized. "
+                f"You gave {self.polarization_direction=} with norm {n}."
+            )
+
+        if not np.allclose(n := np.linalg.norm(self.propagation_direction), 1):
+            raise ValueError(
+                "The propagation direction vector must be normalized. "
+                f"You gave {self.propagation_direction=} with norm {n}."
+            )
+
+        if self.propagation_direction[1] <= 0.0:
+            raise ValueError(
+                "Laser propagation parallel to the y-plane or pointing outside "
+                "from the inside of the simulation box is not supported by this "
+                f"laser in PICMI. You gave {self.propagation_direction=}."
+            )
 
     @model_validator(mode="after")
     @resolve_once
