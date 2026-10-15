@@ -53,7 +53,6 @@ class TestSpeciesShapeAndMethod(TestCase):
         self._assert_converts("other:quartic", "other:Acceleration", Shape.quartic, Pusher.Acceleration)
         self._assert_converts("other:counter", "other:Photon", Shape.counter, Pusher.Photon)
         self._assert_converts("other:quartic", "other:Probe", Shape.quartic, Pusher.Probe)
-        self._assert_converts("other:quartic", "other:Axel", Shape.quartic, Pusher.Axel)
 
     def test_method_explicitly_set_does_not_crash(self):
         # Regression: picmistandard's _validate_method used to raise
@@ -69,9 +68,12 @@ class TestSpeciesShapeAndMethod(TestCase):
             construct.get_as_pypicongpu()
 
     def test_unknown_other_accepted_but_rejected_at_conversion(self):
-        for value in ("other:SomeUnknownPusher", "other:SomeUnknownShape"):
-            with self.subTest(value=value):
-                field = "method" if value.startswith("other:SomeUnknownPusher") else "particle_shape"
+        for field, value in (
+            ("method", "other:SomeUnknownPusher"),
+            ("method", "other:Axel"),
+            ("particle_shape", "other:SomeUnknownShape"),
+        ):
+            with self.subTest(field=field, value=value):
                 construct = species(**{field: value})
                 with self.assertRaises(ValueError, msg=f"{value} must be rejected at conversion time"):
                     construct.get_as_pypicongpu()
