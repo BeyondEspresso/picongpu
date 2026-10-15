@@ -538,15 +538,27 @@ class Simulation(picmistandard.PICMI_Simulation):
                 sources=[
                     (
                         diagnostic.period.get_as_pypicongpu(time_step_size=self.time_step_size, num_steps=num_steps),
-                        diagnostic.species.get_as_pypicongpu(default_particle_shape=default_particle_shape)
-                        if isinstance(diagnostic, ParticleDump)
-                        else PyPIConGPUFieldDump(
-                            name=diagnostic.fieldname,
-                            filtername=diagnostic.filtername,
-                            species_name=None if isinstance(diagnostic, NativeFieldDump) else diagnostic.species_name,
-                            functor=None
-                            if isinstance(diagnostic, NativeFieldDump)
-                            else diagnostic.functor.get_as_pypicongpu(mode="DerivedField"),
+                        (
+                            diagnostic.species.get_as_pypicongpu(default_particle_shape=default_particle_shape)
+                            if isinstance(diagnostic, ParticleDump)
+                            else PyPIConGPUFieldDump(
+                                name=diagnostic.fieldname,
+                                filtername=diagnostic.filtername,
+                                species_name=(
+                                    None if isinstance(diagnostic, NativeFieldDump) else diagnostic.species_name
+                                ),
+                                functor=(
+                                    None
+                                    if isinstance(diagnostic, NativeFieldDump) or isinstance(diagnostic.functor, str)
+                                    else diagnostic.functor.get_as_pypicongpu(mode="DerivedField")
+                                ),
+                                builtin_attribute=(
+                                    diagnostic.functor
+                                    if not isinstance(diagnostic, NativeFieldDump)
+                                    and isinstance(diagnostic.functor, str)
+                                    else None
+                                ),
+                            )
                         ),
                     )
                     for diagnostic in filter(lambda x: x.options == options, diagnostics)
@@ -658,6 +670,10 @@ class Simulation(picmistandard.PICMI_Simulation):
                         one_species.species.register_requirements(filter_functor.get_required_attributes())
                     one_species = one_species.species
                 for functor in functors:
+                    # Built-in density selectors use the species' ordinary
+                    # attributes. Still register any enclosing filter above.
+                    if isinstance(functor, str):
+                        continue
                     one_species.register_requirements(functor.get_required_attributes())
 
     def get_as_pypicongpu(self) -> pypicongpu.simulation.Simulation:

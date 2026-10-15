@@ -5,8 +5,15 @@ License: GPLv3+
 """
 
 import re
+import json
+import tomllib
 from unittest import TestCase
 
+import pytest
+from pydantic import ValidationError
+
+from picongpu import picmi
+from picongpu.picmi import diagnostics as diag
 from picongpu import templates
 from picongpu.pypicongpu.output.openpmd_plugin import FieldDump
 from picongpu.pypicongpu.particle_functor import ParticleFunctor
@@ -17,7 +24,7 @@ TEMPLATE_PATH = templates.path() / "include" / "picongpu" / "param" / "fileOutpu
 
 def render_file_output(derived_fields):
     """Render the real fileOutput template with the given derived-field contexts."""
-    context = {"output": [{"type_openPMD": True, "derived_fields": derived_fields}]}
+    context = {"output": [{"type_openPMD": True, "derived_fields": derived_fields}], "builtin_derived_fields": []}
     return Renderer.get_rendered_template(Renderer.get_context_preprocessed(context), TEMPLATE_PATH.read_text())
 
 
@@ -77,3 +84,57 @@ class TestFileOutputFieldDump(TestCase):
         self.assertNotIn("namespace particles::traits", rendered)
         self.assertNotIn("struct SpeciesEligibleForSolver", rendered)
         self.assertNotIn("CreateEligible_t", rendered)
+
+
+def test_builtin_selectors_reject_unknown_attributes():
+    species = picmi.Species(name="e", particle_type="electron")
+    with pytest.raises(ValidationError):
+        diag.DerivedFieldDump(species=species, functor="UnknownDensity")
+
+
+def test_builtin_fields_species_filters_and_shared_files(tmp_path):
+    grid = picmi.Cartesian3DGrid(
+        number_of_cells=[32] * 3,
+        lower_bound=[0] * 3,
+        upper_bound=[1e-5] * 3,
+        lower_boundary_conditions=["periodic"] * 3,
+        upper_boundary_conditions=["periodic"] * 3,
+    )
+    sim = picmi.Simulation(
+        solver=picmi.ElectromagneticSolver(grid=grid, method="Yee"),
+        time_step_size=1e-16,
+        max_steps=10,
+    )
+    electron = picmi.Species(name="e", particle_type="electron")
+    proton = picmi.Species(name="p", particle_type="proton")
+    for species in (electron, proton):
+        sim.add_species(species, layout=None)
+    filtered = picmi.FilteredSpecies(
+        species=electron, functor=picmi.ParticleFilter(lambda p: p.get("momentumPrev1")[0] > 0, name="forward")
+    )
+    for file in ("fields", "slice"):
+        for species, attribute in [(electron, "ChargeDensity"), (proton, "EnergyDensity"), (filtered, "ChargeDensity")]:
+            sim.add_diagnostic(
+                diag.DerivedFieldDump(
+                    species=species,
+                    functor=attribute,
+                    options=diag.OpenPMDConfig(file=file),
+                )
+            )
+    output = tmp_path / "setup"
+    sim.write_input_file(output)
+    context = json.loads((output / "metadata/pypicongpu_rendering_context.json").read_text())
+    assert "momentumPrev1" in (output / "include/picongpu/param/speciesDefinition.param").read_text()
+    # Two output files must not register duplicate solvers; species and filter differ.
+    assert len(context["builtin_derived_fields"]) == 3
+    header = (output / "include/picongpu/param/fileOutput.param").read_text()
+    assert len(re.findall(r"CreateEligible_t<\s*species_e,", header)) == 2
+    assert len(re.findall(r"CreateEligible_t<\s*species_p,", header)) == 1
+    assert "picongpu::particles::filter::forward" in header
+    filters = (output / "include/picongpu/param/particleFilters.param").read_text()
+    assert "using forward =" in filters
+    configs = list(output.glob("etc/openPMD_config_*.toml"))
+    assert len(configs) == 2
+    for file in configs:
+        periods = tomllib.loads(file.read_text())["sink"]["dummy_application_name"]["period"]
+        assert list(periods.values()) == [["e_all_chargeDensity", "p_all_energyDensity", "e_forward_chargeDensity"]]

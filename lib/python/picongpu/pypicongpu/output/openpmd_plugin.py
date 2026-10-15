@@ -32,6 +32,7 @@ from picongpu.pypicongpu.species.species import Species
 from picongpu.pypicongpu.util import unique
 
 NATIVE_FIELDS = ["E", "B", "J"]
+BuiltinDerivedAttribute = Literal["ChargeDensity", "EnergyDensity"]
 
 
 class RangeSpecEntry(BaseModel):
@@ -106,6 +107,7 @@ def to_string(timestepspec: TimeStepSpec):
 class FieldDump(BaseModel):
     name: str
     functor: ParticleFunctor | None = None
+    builtin_attribute: BuiltinDerivedAttribute | None = None
     filtername: None | str
     species_name: str | None = None
     """Compile-time name of the source species this derived field is defined for.

@@ -27,6 +27,9 @@
 #include "picongpu/particles/particleToGrid/CombinedDerive.def"
 #include "picongpu/particles/particleToGrid/ComputeGridValuePerFrame.def"
 #include "picongpu/particles/traits/SpeciesEligibleForSolver.hpp"
+{{#builtin_derived_fields}}
+#include "picongpu/particles/particleToGrid/derivedAttributes/{{{attribute}}}.def"
+{{/builtin_derived_fields}}
 
 #include <pmacc/meta/conversion/MakeSeq.hpp>
 #include <pmacc/traits/GetCTName.hpp>
@@ -99,6 +102,12 @@ namespace picongpu
 {{/functor}} {{/derived_fields}} {{/type_openPMD}} {{/output}}
 
     using FieldTmpSolvers = MakeSeq_t<
+    {{#builtin_derived_fields}}
+      deriveField::CreateEligible_t<
+        {{{species_typename}}}, deriveField::derivedAttributes::{{{attribute}}}
+        {{#filtername}}, picongpu::particles::filter::{{{filtername}}}{{/filtername}}
+      >,
+    {{/builtin_derived_fields}}
     {{#output}}{{#type_openPMD}}{{#derived_fields}}{{#functor}}
       {{{typename}}}_Seq,
     {{/functor}}{{/derived_fields}}{{/type_openPMD}}{{/output}}
