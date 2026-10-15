@@ -66,6 +66,92 @@ Guard cells
 It must be a non-negative multiple of the super-cell size;
 if unset, PIConGPU's default is used.
 
+PML absorber
+^^^^^^^^^^^^
+
+The standard PICMI grid argument ``pml_cells`` sets the thickness in cells:
+one integer per spatial axis, applied to both faces of that axis.
+For example, ``pml_cells=[110, 110, 110]`` sets all six faces in 3D to 110 cells.
+Values must be integers from zero to ``2**32 - 1``; zero disables absorption
+on that axis. Periodic axes require zero when thickness is explicitly supplied.
+Thickness need not be a multiple of the super-cell size.
+
+Additional coefficients use the PIConGPU extension ``picongpu_pml``.
+Pass a ``picmi.PML`` object alongside the grid's usual domain arguments:
+
+.. code-block:: python
+
+   grid = picmi.Cartesian3DGrid(
+       number_of_cells=[3584, 3584, 1792],
+       lower_bound=[0, 0, 0],
+       upper_bound=[3584 * 6.177353e-8, 3584 * 3.088676e-8, 1792 * 6.177353e-8],
+       lower_boundary_conditions=["open"] * 3,
+       upper_boundary_conditions=["open"] * 3,
+       picongpu_n_gpus=[8, 16, 8],
+       picongpu_super_cell_size=[8, 8, 8],
+       pml_cells=[110, 110, 110],
+       picongpu_pml=picmi.PML(
+           sigma_kappa_grading_order=2.5,
+           sigma_opt_multiplier=1.25,
+           kappa_max=[4, 1, 4],
+           alpha_grading_order=1.0,
+           alpha_max_si=[0, 0, 0],
+       ),
+   )
+
+``picmi.PML`` and its coefficient names are PIConGPU extensions, not additions
+adopted by the PICMI standard. Supported coefficients and defaults are:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Parameter
+     - Default
+     - Allowed values
+   * - ``sigma_kappa_grading_order``
+     - ``4.0``
+     - Finite, nonnegative
+   * - ``sigma_opt_multiplier``
+     - ``1.0``
+     - Finite, nonnegative
+   * - ``kappa_max``
+     - ``(1.0, 1.0, 1.0)``
+     - Three finite components, each at least one
+   * - ``alpha_grading_order``
+     - ``1.0``
+     - Finite, nonnegative
+   * - ``alpha_max_si``
+     - ``(0.2, 0.2, 0.2)``
+     - Three finite, nonnegative components, in siemens/metre
+
+The generated conductivity is calculated separately for each axis ``d``:
+
+.. code-block:: text
+
+   SIGMA_OPT_SI[d] = 0.8 * (sigma_kappa_grading_order + 1) / (Z0 * cell_size[d])
+   SIGMA_MAX_SI[d] = sigma_opt_multiplier * SIGMA_OPT_SI[d]
+
+Here ``Z0`` is PIConGPU's vacuum impedance. The expression retains the actual
+cell size per axis, including anisotropic grids. Coefficient vectors always
+have three components, including for 2D. ``to_2d()`` preserves coefficients
+and the x/y thicknesses; an explicitly configured 2D absorber has zero z thickness.
+
+Omitting both options preserves the C++ default coefficients and 12-cell
+thickness (periodic faces are disabled by PIConGPU at runtime). Supplying only
+``picongpu_pml`` chooses 12 cells on open axes and zero on periodic axes;
+supplying only ``pml_cells`` retains default coefficients.
+Generated runtime configuration explicitly selects ``--fieldAbsorber pml``.
+PIConGPU disables the absorber when every axis is periodic.
+An exponential-absorber selector and arbitrary conductivity formulas are not exposed.
+
+For explicit PML configuration, Python checks that layers fit every local
+domain, accounting for nonuniform GPU partitions and opposing layers on a
+single rank. Active incident-field injection faces must also clear the PML
+by the field solver's required margin. No Huygens positions are moved or
+clamped; inactive faces, such as the distant YMax used by the TWTS moving
+window, are preserved. These checks cover absorber clearance, not every
+incident-field stencil constraint at GPU interfaces; C++ runtime checks remain.
+
 Solvers
 -------
 

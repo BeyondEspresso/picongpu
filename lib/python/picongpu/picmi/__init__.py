@@ -46,6 +46,7 @@ from .memory_config import MemoryConfig
 from .multi_species import MultiSpecies
 from .particle_functor import FilteredSpecies, ParticleFilter, ParticleFunctor
 from .precision_config import PrecisionConfig
+from .pml import PML
 from .simulation import Simulation
 from .solver import BinomialSmoother, ElectromagneticSolver
 from .species import CompositePusher, Species
@@ -71,6 +72,7 @@ __all__ = [
     "MemoryConfig",
     "PrecisionConfig",
     "MultiSpecies",
+    "PML",
     "FilteredSpecies",
     "ParticleFilter",
     "PseudoRandomLayout",

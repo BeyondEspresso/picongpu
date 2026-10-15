@@ -17,6 +17,7 @@ from pydantic import (
     computed_field,
     field_serializer,
     field_validator,
+    model_validator,
 )
 
 from picongpu.pypicongpu.collisions import CollisionalPhysicsSetup
@@ -38,6 +39,7 @@ from .output import AnyPlugin, OpenPMDPlugin
 from .precision_config import PrecisionConfig
 from .rendering import RenderedObject
 from .walltime import Walltime
+from .pml import validate_pml_injection
 
 
 def _default_min_weighting(value: float | None) -> float:
@@ -143,6 +145,11 @@ class Simulation(RenderedObject, BaseModel):
 
     memory_config: MemoryConfig = MemoryConfig()
     """memory / exchange-buffer knobs rendered into ``memory.param`` (see ``MemoryConfig``)."""
+
+    @model_validator(mode="after")
+    def _check_pml_injection(self):
+        validate_pml_injection(self)
+        return self
 
     @computed_field
     def precisionSqrt(self) -> str:
