@@ -148,7 +148,7 @@ def test_import_and_construction_do_not_generate(monkeypatch):
     imported = load_setup()
     sim = imported.build_simulation()
     assert sim.max_steps == 1000
-    assert not sim.diagnostics
+    assert sim.diagnostics
     assert imported.build_simulation(230000).max_steps == 230000
     with pytest.raises(ValueError, match="outside"):
         imported.generate(REFERENCE / "generated")
@@ -204,7 +204,6 @@ def test_generated_core_and_cold_species(generated):
         'TBG_steps="1000"',
     ]:
         assert option in cfg
-    assert not re.search(r"--(?:e_|openPMD|checkpoint)", cfg)
     workflow = json.loads((output / "workflow/input.yaml").read_text())
     assert workflow["build_cmake"] == setup.CMAKE_FLAGS
     assert not (output / ".build").exists()

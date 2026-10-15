@@ -1,7 +1,7 @@
-"""Core PICMI migration of the active tweac5DegreeSetup (task 9a).
+"""PICMI migration of the active tweac5DegreeSetup (tasks 9a/9b).
 
 Generate input only: python picmi_setup.py /path/to/new-output-directory
-Reference diagnostics are pending tasks 9b/9c. No C++ template overrides.
+The Binning eSpec diagnostic remains pending task 9c. No C++ template overrides.
 """
 
 import argparse
@@ -13,6 +13,8 @@ from sympy import Float, Or, Piecewise, exp
 
 from picongpu import picmi
 from picongpu.picmi.constants import GiB, MiB
+from picongpu.picmi import diagnostics as diag
+from picongpu.picmi.diagnostics.backend_config import RangeSpec
 
 
 NUMBER_OF_CELLS = (3584, 3584, 1792)
@@ -33,6 +35,77 @@ X_PLATEAU_END = NUMBER_OF_CELLS[0] * CELL_SIZE_SI[0] - X_PLATEAU_START
 Z_PLATEAU_START = VACUUM_Z_SI + RAMP_LENGTH_SI
 Z_PLATEAU_END = NUMBER_OF_CELLS[2] * CELL_SIZE_SI[2] - Z_PLATEAU_START
 LONGITUDINAL_RAMP_SI = 100e-6
+
+
+def add_diagnostics(simulation, electrons, max_steps):
+    """Active config.cfg outputs; the separate Binning eSpec follows in 9c."""
+    period = diag.TS[::812]
+    simulation.add_diagnostic(diag.FieldEnergyMonitor(period=period))
+    simulation.add_diagnostic(diag.ParticleEnergy(species=electrons, period=period))
+    mc = electrons.picongpu_get_mass_si() * picmi.constants.c
+    for position, momentum, lower, upper in [
+        ("x", "px", -20, 20),
+        ("x", "pz", -20, 20),
+        ("y", "px", -20, 20),
+        ("y", "pz", -20, 20),
+        ("y", "py", -50, 2000),
+        ("x", "py", -50, 2000),
+        ("z", "py", -50, 2000),
+    ]:
+        simulation.add_diagnostic(
+            diag.PhaseSpace(
+                species=electrons,
+                period=period,
+                spatial_coordinate=position,
+                momentum_coordinate=momentum,
+                min_momentum=lower * mc,
+                max_momentum=upper * mc,
+                picongpu_extension="bp",
+            )
+        )
+    # Only the compression object is active in config.cfg, not its unused
+    # BP5 engine/buffer configuration. Embed it reproducibly in each TOML file.
+    compression = {
+        "adios2": {
+            "dataset": {
+                "operators": [
+                    {
+                        "type": "blosc",
+                        "parameters": {"clevel": "1", "compressor": "zstd", "doshuffle": "BLOSC_BITSHUFFLE"},
+                    }
+                ]
+            }
+        }
+    }
+    for filename, interval, bounds in [
+        ("simOutput", 8120, (None, None, None)),
+        ("simOutputX", 812, ((1780, 1804), None, None)),
+        ("simOutputY", 812, (None, (1780, 1804), None)),
+        ("simOutputZ", 812, (None, None, (884, 908))),
+    ]:
+        options = diag.OpenPMDConfig(
+            file=filename,
+            infix="_%T",
+            ext="bp",
+            range=RangeSpec(*bounds),
+            data_preparation_strategy="mappedMemory",
+            backend_config=compression,
+        )
+        schedule = diag.TS[0:max_steps:interval]
+        for field in ("E", "B"):
+            simulation.add_diagnostic(diag.NativeFieldDump(fieldname=field, period=schedule, options=options))
+        # The reference inherits fileOutput.param: fields_all means E, B and
+        # these two built-in electron fields. Explicit sources exclude J.
+        for attribute in ("ChargeDensity", "EnergyDensity"):
+            simulation.add_diagnostic(
+                diag.DerivedFieldDump(species=electrons, functor=attribute, period=schedule, options=options)
+            )
+    simulation.add_diagnostic(
+        diag.Checkpoint(
+            period=diag.TS[0:max_steps:50000],
+            openPMD={"infix": "_%T", "dataPreparationStrategy": "mappedMemory"},
+        )
+    )
 
 
 def density_si(x, y, z):
@@ -72,7 +145,7 @@ def density_si(x, y, z):
 
 
 def build_simulation(max_steps=DEFAULT_STEPS):
-    """Construct the core setup without generating, compiling or running it."""
+    """Construct the setup without generating, compiling or running it."""
     if type(max_steps) is not int or max_steps < 0:
         raise ValueError("max_steps must be a nonnegative integer")
     grid = picmi.Cartesian3DGrid(
@@ -148,7 +221,7 @@ def build_simulation(max_steps=DEFAULT_STEPS):
         ),
         layout=picmi.PseudoRandomLayout(n_macroparticles_per_cell=1),
     )
-    # Tasks 9b/9c add reference diagnostics here; the current list is empty.
+    add_diagnostics(simulation, simulation.species[0], max_steps)
     return simulation
 
 
@@ -167,7 +240,7 @@ def main():
     parser.add_argument("--steps", type=int, default=DEFAULT_STEPS, help="default: active 1000-step run")
     args = parser.parse_args()
     output = generate(args.output_directory, args.steps)
-    print(f"Generated core input at {output}. Reference diagnostics remain pending tasks 9b/9c.")
+    print(f"Generated input at {output}. Binning eSpec remains pending task 9c; final audit is task 9d.")
 
 
 if __name__ == "__main__":
