@@ -1,7 +1,7 @@
-"""PICMI migration of the active tweac5DegreeSetup (tasks 9a/9b).
+"""PICMI migration of the active tweac5DegreeSetup (tasks 9a–9c).
 
 Generate input only: python picmi_setup.py /path/to/new-output-directory
-The Binning eSpec diagnostic remains pending task 9c. No C++ template overrides.
+The final migration audit remains task 9d. No C++ template overrides.
 """
 
 import argparse
@@ -9,12 +9,13 @@ import math
 from datetime import timedelta
 from pathlib import Path
 
-from sympy import Float, Or, Piecewise, exp
+from sympy import Float, Or, Piecewise, atan2, exp
 
 from picongpu import picmi
 from picongpu.picmi.constants import GiB, MiB
 from picongpu.picmi import diagnostics as diag
 from picongpu.picmi.diagnostics.backend_config import RangeSpec
+from picongpu.picmi.particle_functor import UnitDimension
 
 
 NUMBER_OF_CELLS = (3584, 3584, 1792)
@@ -37,8 +38,59 @@ Z_PLATEAU_END = NUMBER_OF_CELLS[2] * CELL_SIZE_SI[2] - Z_PLATEAU_START
 LONGITUDINAL_RAMP_SI = 100e-6
 
 
+def electron_spectrometer(electrons):
+    """Active binningSetup.param: charge versus single-electron energy/pointing.
+
+    Accessors return weighted particle attributes in PIC units. Axis limits
+    are SI; their dimensions let the Binning plugin convert them to PIC units.
+    """
+    return diag.Binning(
+        name="eSpec",
+        species=electrons,
+        period=diag.TS[::500],
+        axes=[
+            diag.BinningAxis(
+                functor=picmi.ParticleFunctor(
+                    lambda p: p.get("kinetic energy") / p.get("weighting"),
+                    name="Energy",
+                    return_type="float_X",
+                    unit_dimension=UnitDimension(L=2, M=1, T=-2),
+                ),
+                bin_spec=diag.BinSpec(kind="linear", start=0, stop=1000e6 * picmi.constants.q_e, nsteps=1600),
+                use_overflow_bins=True,
+            ),
+            diag.BinningAxis(
+                functor=picmi.ParticleFunctor(
+                    lambda p: atan2(p.get("momentum")[0], p.get("momentum")[1]),
+                    name="pointingXY",
+                    return_type="float_X",
+                    unit_dimension=UnitDimension(),
+                ),
+                bin_spec=diag.BinSpec(kind="linear", start=-0.1, stop=0.1, nsteps=256),
+                use_overflow_bins=True,
+            ),
+        ],
+        # getCharge already includes the macroparticle weight; do not multiply it again.
+        deposition_functor=picmi.ParticleFunctor(
+            lambda p: p.get("charge"),
+            name="Charge",
+            return_type="float_X",
+            unit_dimension=UnitDimension(T=1, I=1),
+        ),
+        # The reference's adios2.dataset.chunks="auto" is ignored by openPMD
+        # (chunks is an HDF5 option) and rejected by the typed backend model.
+        # Omission preserves effective ADIOS2 defaults; see resolvedConflicts.md.
+        openPMDBackendConfig=None,
+        openPMDExt="bp",
+        # One snapshot per notification (the reference's dumpPeriod=0 also
+        # dumps on every notification). Retain the default filename infix.
+        dumpPeriod=1,
+        particle_region=["Bounded"],
+    )
+
+
 def add_diagnostics(simulation, electrons, max_steps):
-    """Active config.cfg outputs; the separate Binning eSpec follows in 9c."""
+    """Active config.cfg outputs and the separate Binning electron spectrometer."""
     period = diag.TS[::812]
     simulation.add_diagnostic(diag.FieldEnergyMonitor(period=period))
     simulation.add_diagnostic(diag.ParticleEnergy(species=electrons, period=period))
@@ -106,6 +158,7 @@ def add_diagnostics(simulation, electrons, max_steps):
             openPMD={"infix": "_%T", "dataPreparationStrategy": "mappedMemory"},
         )
     )
+    simulation.add_diagnostic(electron_spectrometer(electrons))
 
 
 def density_si(x, y, z):
@@ -240,7 +293,7 @@ def main():
     parser.add_argument("--steps", type=int, default=DEFAULT_STEPS, help="default: active 1000-step run")
     args = parser.parse_args()
     output = generate(args.output_directory, args.steps)
-    print(f"Generated input at {output}. Binning eSpec remains pending task 9c; final audit is task 9d.")
+    print(f"Generated input at {output}, including Binning eSpec. Final migration audit remains task 9d.")
 
 
 if __name__ == "__main__":
