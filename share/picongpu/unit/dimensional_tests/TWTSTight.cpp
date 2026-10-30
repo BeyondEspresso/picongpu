@@ -17,59 +17,12 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <pmacc/boost_workaround.hpp>
+#include "twtstight/FieldEvaluation.hpp"
 
 #include <pmacc/test/PMaccFixture.hpp>
 
-// STL
-#include <pmacc/Environment.hpp>
-#include <pmacc/algorithms/math.hpp>
-#include <pmacc/dimensions/DataSpace.hpp>
-#include <pmacc/lockstep.hpp>
-#include <pmacc/math/ConstVector.hpp>
-#include <pmacc/memory/buffers/DeviceBuffer.hpp>
-#include <pmacc/memory/buffers/HostBuffer.hpp>
-#include <pmacc/meta/conversion/MakeSeq.hpp>
-
-#include <array>
-#include <cmath>
-#include <cstdint>
-#include <iomanip>
-#include <iostream>
-#include <limits>
-#include <string>
-#include <type_traits>
-#include <typeinfo>
-
-#include <catch2/catch_approx.hpp>
-#include <catch2/catch_test_macros.hpp>
-#include <picongpu/fields/background/templates/twtstight/TWTSTight.hpp>
-#include <picongpu/param/precision.param>
-
-using namespace picongpu;
-using namespace pmacc;
-
-//! Helper to setup the PMacc environment
+// Initialize and finalize PMacc exactly once for the combined test executable.
 static pmacc::test::PMaccFixture<simDim> pmaccFixture;
-
-/** check if floating point result is equal
- *
- * Allows an error of one epsilon.
- * @return true if equal, else false
- */
-template<typename T>
-static bool isApproxEqual(T const& a, T const& b, T const& epsilon)
-{
-    T const epsilonScaled = epsilon * math::max(math::abs(a), math::abs(b));
-    return a == Catch::Approx(b).epsilon(0).margin(epsilonScaled);
-}
-
-template<typename T>
-static bool isApproxEqual(T const& a, T const& b)
-{
-    T const epsilon = std::numeric_limits<T>::epsilon() * math::max(math::abs(a), math::abs(b));
-    return a == Catch::Approx(b).epsilon(0).margin(epsilon);
-}
 
 template<uint32_t T_numThreadsPerBlock>
 struct GenerateEvals
@@ -103,12 +56,12 @@ struct GenerateEvals
                 auto valueIdx = blockIdx * T_numThreadsPerBlock + idx;
                 if(valueIdx < numValues)
                 {
-                    result(0u + valueIdx) = testEfield.calcTWTSFieldX(pos, time);
-                    result(1u + valueIdx) = testEfield.calcTWTSFieldY(pos, time);
-                    result(2u + valueIdx) = testEfield.calcTWTSFieldZ(pos, time);
-                    result(3u + valueIdx) = testBfield.calcTWTSFieldX(pos, time);
-                    result(4u + valueIdx) = testBfield.calcTWTSFieldY(pos, time);
-                    result(5u + valueIdx) = testBfield.calcTWTSFieldZ(pos, time);
+                    result(0u + valueIdx) = evaluateTWTSComponent<0u>(testEfield, pos, time);
+                    result(1u + valueIdx) = evaluateTWTSComponent<1u>(testEfield, pos, time);
+                    result(2u + valueIdx) = evaluateTWTSComponent<2u>(testEfield, pos, time);
+                    result(3u + valueIdx) = evaluateTWTSComponent<0u>(testBfield, pos, time);
+                    result(4u + valueIdx) = evaluateTWTSComponent<1u>(testBfield, pos, time);
+                    result(5u + valueIdx) = evaluateTWTSComponent<2u>(testBfield, pos, time);
                 }
             });
     }
@@ -169,17 +122,17 @@ struct twtsTightNumberTest
 
         auto res = resultHost.getDataBox();
         auto hostEfield = float3_T(
-            testEfield.calcTWTSFieldX(pos, time),
-            testEfield.calcTWTSFieldY(pos, time),
-            testEfield.calcTWTSFieldZ(pos, time));
+            evaluateTWTSComponent<0u>(testEfield, pos, time),
+            evaluateTWTSComponent<1u>(testEfield, pos, time),
+            evaluateTWTSComponent<2u>(testEfield, pos, time));
         auto hostBfield = float3_T(
-            testBfield.calcTWTSFieldX(pos, time),
-            testBfield.calcTWTSFieldY(pos, time),
-            testBfield.calcTWTSFieldZ(pos, time));
+            evaluateTWTSComponent<0u>(testBfield, pos, time),
+            evaluateTWTSComponent<1u>(testBfield, pos, time),
+            evaluateTWTSComponent<2u>(testBfield, pos, time));
 
 // This combination of compilers has a bug that is triggered by Catch2 internally suppressing warnings.
 // See https://github.com/ComputationalRadiationPhysics/picongpu/pull/5174#issuecomment-2467890326
-#if (__GNUC__ != 11 || __CUDACC_VER_MAJOR__ != 11)
+#if(__GNUC__ != 11 || __CUDACC_VER_MAJOR__ != 11)
         float3_64 const refEfield(reference[0], reference[1], reference[2]);
         float3_64 const refBfield(reference[3], reference[4], reference[5]);
         float3_T const refEfieldT = precisionCast<float_T>(refEfield);
@@ -332,285 +285,4 @@ TEST_CASE("unit::TWTSTight scaled fields", "[TWTSTight laser math test]")
         CAPTURE(test.waist, test.zSign);
         twtsTightNumberTest()(test.waist, test.zSign, test.field);
     }
-}
-
-template<typename T>
-struct GenerateBesselRatios
-{
-    template<typename T_Worker, typename T_Box>
-    HDINLINE void operator()(T_Worker const&, alpaka::Complex<T> const q, T const a, T_Box result) const
-    {
-        auto const ratios = templates::twtstight::detail::besselJOverI0(q, a);
-        for(uint32_t n = 0; n < 2u; ++n)
-        {
-            result[2u * n] = ratios[n].real();
-            result[2u * n + 1u] = ratios[n].imag();
-        }
-        if(a < T(50))
-        {
-            // Evaluate the direct formula independently for the small-a branch check.
-            auto const denominator = math::bessel::i0(a);
-            auto const r0 = math::bessel::j0(q) / denominator;
-            auto const r1 = math::bessel::j1(q) / denominator;
-            result[4] = r0.real();
-            result[5] = r0.imag();
-            result[6] = r1.real();
-            result[7] = r1.imag();
-        }
-    }
-};
-
-template<typename T>
-static void testBesselRatios()
-{
-    /* mpmath, mp.dps=100: r[n] = besselj(n, mpc(qr,qi))/besseli(0,a).
-     * Exact binary inputs isolate ratio accuracy from rounding
-     * when computing the ratio's inputs from beam parameters and position.
-     * a, Re(q), Im(q), Re(R0), Im(R0), Re(R1), Im(R1). */
-    std::array<std::array<double, 7u>, 16u> const cases{
-        {{49.9990234375,
-          3.0,
-          49.9990234375,
-          -0.984400135038261971143,
-          -0.1707122907418998998654,
-          0.1684080502029405851505,
-          -0.9746446795707597764629},
-         {50.0,
-          3.0,
-          50.0,
-          -0.98440027075448533217,
-          -0.17071171617095135334,
-          0.16840753788905131908,
-          -0.97464500169131651503},
-         {50.0009765625,
-          3.0,
-          50.0009765625,
-          -0.9844004064643769588637,
-          -0.1707111416222631548731,
-          0.1684070255943275215084,
-          -0.9746453237984722486887},
-         {50.0,
-          3.0,
-          49.0,
-          -0.36578341543081707079,
-          -0.063665303625172617733,
-          0.062784683832877311785,
-          -0.36208568879000739974},
-         {50.0,
-          3.0,
-          51.0,
-          -2.6497461592882321213,
-          -0.45789495173963087234,
-          0.45186087572616665663,
-          -2.6239950914641511818},
-         {50.0, 0.0, 0.0, 3.4099971346045609967e-21, 0.0, 0.0, 0.0},
-         {50.0, 3.0, 0.0, -8.8677642106390754239e-22, 0.0, 1.1561900770354500115e-21, 0.0},
-         {50.0,
-          1.0,
-          2.0,
-          5.409140179929492353e-21,
-          -4.7453603749448956942e-21,
-          4.4051963389525569207e-21,
-          3.4457624294722526016e-21},
-         {100.0, 0.0, 100.0, 1.0, 0.0, 0.0, 0.99498737300516876559},
-         {1000.0, 0.0, 1000.0, 1.0, 0.0, 0.0, 0.9994998748748042802},
-         {1000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, // Physical underflow, no NaNs at q=0.
-         // Scaled numerator paths and representable subnormal inverse-I0 values.
-         {50,
-          3,
-          4,
-          -3.004938508623322361639e-20,
-          -1.568066006178076536363e-20,
-          1.246050558915170769864e-20,
-          -2.865456143673171704378e-20},
-         {50,
-          31,
-          2,
-          7.093786936804610182313e-22,
-          1.631907724937761659793e-21,
-          -1.681442987671879680382e-21,
-          7.133615834755543905295e-22},
-         {1000,
-          3,
-          1000,
-          -0.9897774219312946209385,
-          -0.1426048835491377824143,
-          0.1425320785098911801336,
-          -0.9892826278440534688875},
-         {104, 0, 0, 1.739626289826376347294e-44, 0.0, 0.0, 0.0},
-         {746, 0, 0, 7.107273509301367849004e-323, 0.0, 0.0, 0.0}}};
-    for(auto const& test : cases)
-    {
-        for(T const sign : {T(-1), T(1)})
-        {
-            T const a = T(test[0]);
-            alpaka::Complex<T> const q(T(test[1]), sign * T(test[2]));
-            CAPTURE(sizeof(T), a, q.real(), q.imag());
-            HostBuffer<T, 1u> host(8u);
-            DeviceBuffer<T, 1u> device(8u);
-            device.setValue(T(0));
-            PMACC_LOCKSTEP_KERNEL(GenerateBesselRatios<T>{}).template config<1u>(1u)(q, a, device.getDataBox());
-            host.copyFrom(device);
-            auto const result = host.getDataBox();
-            auto const ratios = templates::twtstight::detail::besselJOverI0(q, a);
-            for(uint32_t n = 0; n < 2u; ++n)
-            {
-                CAPTURE(n);
-                alpaka::Complex<T> const reference(T(test[3u + 2u * n]), sign * T(test[4u + 2u * n]));
-                T const referenceScale = math::max(math::abs(reference.real()), math::abs(reference.imag()));
-                // Relative precision is unavailable for subnormals; allow two representable steps.
-                // Keep exactly-zero references strict (including physical underflow at a=1000).
-                T const tolerance = referenceScale == T(0)
-                                        ? T(0)
-                                        : math::max(
-                                              T(128) * std::numeric_limits<T>::epsilon() * referenceScale,
-                                              T(2) * std::numeric_limits<T>::denorm_min());
-                CHECK(std::isfinite(result[2u * n]));
-                CHECK(std::isfinite(result[2u * n + 1u]));
-                CHECK(std::isfinite(ratios[n].real()));
-                CHECK(std::isfinite(ratios[n].imag()));
-                /* Compare components separately: squaring tiny complex errors in abs()
-                 * can underflow in single precision and hide a regression. */
-                CHECK(math::abs(ratios[n].real() - reference.real()) <= tolerance);
-                CHECK(math::abs(ratios[n].imag() - reference.imag()) <= tolerance);
-                CHECK(math::abs(result[2u * n] - reference.real()) <= tolerance);
-                CHECK(math::abs(result[2u * n + 1u] - reference.imag()) <= tolerance);
-                if(a < T(50))
-                {
-                    // Separate evaluations of the same formula need not be bitwise identical:
-                    // inlining and floating-point contraction can change intermediate rounding.
-                    // Allow a small componentwise relative difference; the independent reference
-                    // checks above continue to enforce the numerical accuracy of the ratios.
-                    constexpr T directRelativeTolerance = T(4) * std::numeric_limits<T>::epsilon();
-                    CHECK(isApproxEqual(result[2u * n], result[4u + 2u * n], directRelativeTolerance));
-                    CHECK(isApproxEqual(result[2u * n + 1u], result[5u + 2u * n], directRelativeTolerance));
-                    T const denominator = math::bessel::i0(a);
-                    auto const direct
-                        = n == 0u ? math::bessel::j0(q) / denominator : math::bessel::j1(q) / denominator;
-                    CHECK(isApproxEqual(ratios[n].real(), direct.real(), directRelativeTolerance));
-                    CHECK(isApproxEqual(ratios[n].imag(), direct.imag(), directRelativeTolerance));
-                }
-            }
-        }
-    }
-}
-
-TEST_CASE("unit::TWTSTight Bessel ratios", "[TWTSTight laser math test]")
-{
-    testBesselRatios<float>();
-    testBesselRatios<double>();
-}
-
-// This combination of compilers has a bug that is triggered by Catch2 internally suppressing warnings.
-// See https://github.com/ComputationalRadiationPhysics/picongpu/pull/5174#issuecomment-2467890326
-#if (__GNUC__ != 11 || __CUDACC_VER_MAJOR__ != 11)
-/** Check the cutoff against the envelope geometry in SI coordinates.
- *
- * The center satisfies y = beta*c*t - z*(beta-cos(phi))/sin(phi).
- * The Gaussian width follows independently from q = tan(alpha)^2*z/(c*sin(phi)),
- * avoiding the guard's nu/xi expression when constructing the expected boundary.
- */
-struct twtsTightEnvelopeGuardTest
-{
-    static constexpr float_64 wavelength = 800.0e-9;
-    static constexpr float_64 pulseLength = 30.0e-15;
-    // Keep individual Bessel values representable in float in the end-to-end check by using a small waist.
-    static constexpr float_64 waist = 0.5e-6;
-
-    static void checkEnvelope(float_64 const beta, float_64 const phi)
-    {
-        templates::twtstight::EField const
-            eField{0.0, wavelength, pulseLength, waist, phi, beta, 0.0, false, 0.0, PI / 6.0};
-        templates::twtstight::BField const
-            bField{0.0, wavelength, pulseLength, waist, phi, beta, 0.0, false, 0.0, PI / 6.0};
-        float_64 const c = sim.si.getSpeedOfLight();
-        float_64 const sinPhi = std::sin(std::abs(phi));
-        float_64 const cosPhi = std::cos(phi);
-        float_64 const tanAlpha = (1.0 - beta * cosPhi) / (beta * sinPhi);
-        float_64 const tau = 2.0 * pulseLength;
-        float_64 const omega = 2.0 * PI * c / wavelength;
-        float_64 const period = wavelength / (c * (1.0 - beta * cosPhi));
-        float_64 const phiSign = phi < 0.0 ? -1.0 : 1.0;
-
-        // Include no broadening and both signs of the imaginary part of sigma.
-        for(float_64 const broadening : {-2.0, 0.0, 2.0})
-        {
-            float_64 const z = broadening * omega * tau * tau * c * sinPhi / (2.0 * tanAlpha * tanAlpha);
-            float_64 const width = tau * std::sqrt(1.0 + broadening * broadening);
-            // The second time exercises the reduced-coordinate translation by many periods.
-            for(float_64 const periods : {0.25, 17.25})
-            {
-                float_64 const time = periods * period;
-                float_64 const centerY = beta * c * time - z * (beta - cosPhi) / sinPhi;
-                // Stay clear of equality: coordinates are rounded to float_T by the functor.
-                for(float_64 const offset : {-1.05, -0.95, 0.0, 0.95, 1.05})
-                {
-                    float_64 const u = offset * templates::twtstight::numSigmas * width;
-                    float3_64 const pos{0.0, centerY - beta * c * u, phiSign * z};
-                    bool const outside = std::abs(offset) > 1.0;
-                    INFO("beta = " << beta << ", phi = " << phi << ", broadening = " << broadening);
-                    INFO("periods = " << periods << ", boundary fraction = " << offset);
-                    CHECK(eField.isOutsideTWTSEnvelope(eField.defineMinimalCoordinates(pos, time)) == outside);
-                    CHECK(bField.isOutsideTWTSEnvelope(bField.defineMinimalCoordinates(pos, time)) == outside);
-                }
-            }
-        }
-    }
-
-    /** Exercise the actual field early-outs, including the negative-angle coordinate rotation. */
-    template<typename T_Field>
-    static void checkNegativePhi(float_64 const beta)
-    {
-        using float_T = templates::twtstight::float_T;
-        float_64 const phi = -PI / 6.0;
-        T_Field const field{0.0, wavelength, pulseLength, waist, phi, beta, 0.0, false, 0.0, PI / 6.0};
-        float_64 const c = sim.si.getSpeedOfLight();
-        float_64 const sinPhi = std::sin(-phi);
-        float_64 const cosPhi = std::cos(phi);
-        float_64 const tanAlpha = (1.0 - beta * cosPhi) / (beta * sinPhi);
-        float_64 const tau = 2.0 * pulseLength;
-        float_64 const omega = 2.0 * PI * c / wavelength;
-        float_64 const z = 300.0e-6;
-        float_64 const broadening = 2.0 * tanAlpha * tanAlpha * z / (c * sinPhi * omega * tau * tau);
-        float_64 const width = tau * std::sqrt(1.0 + broadening * broadening);
-        float_64 const time = 17.25 * wavelength / (c * (1.0 - beta * cosPhi));
-        float_64 const centerY = beta * c * time - z * (beta - cosPhi) / sinPhi;
-
-        INFO("negative-angle field check, beta = " << beta);
-        for(float_64 const offset : {-1.05, 0.0, 1.05})
-        {
-            float_64 const u = offset * templates::twtstight::numSigmas * width;
-            float3_64 const pos{-0.1e-6, centerY - beta * c * u, -z};
-            std::array<float_T, 3u> const values{
-                field.calcTWTSFieldX(pos, time),
-                field.calcTWTSFieldY(pos, time),
-                field.calcTWTSFieldZ(pos, time)};
-            INFO("boundary fraction = " << offset);
-            bool anyNonzero = false;
-            for(auto const value : values)
-            {
-                CHECK(std::isfinite(value));
-                anyNonzero = anyNonzero || value != float_T(0.0);
-                if(offset != 0.0)
-                    CHECK(value == float_T(0.0));
-            }
-            // Test the vector rather than requiring each oscillatory component to be nonzero.
-            if(offset == 0.0)
-                CHECK(anyNonzero);
-        }
-    }
-};
-#endif
-
-TEST_CASE("unit::TWTSTightEnvelopeGuard", "[TWTSTight laser envelope guard test]")
-{
-#if (__GNUC__ != 11 || __CUDACC_VER_MAJOR__ != 11)
-    for(float_64 const beta : {0.9, 1.0, 1.1})
-    {
-        for(float_64 const phi : {-PI / 2.0, -PI / 6.0, PI / 6.0, PI / 2.0})
-            twtsTightEnvelopeGuardTest::checkEnvelope(beta, phi);
-        twtsTightEnvelopeGuardTest::checkNegativePhi<templates::twtstight::EField>(beta);
-        twtsTightEnvelopeGuardTest::checkNegativePhi<templates::twtstight::BField>(beta);
-    }
-#endif
 }
